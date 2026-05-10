@@ -1,28 +1,16 @@
-# Current Feature: Auth Setup - NextAuth + Google OAuth Provider
+# Current Feature
 
 ## Status
 
-In Progress
+<!-- Not Started | In Progress | Completed -->
 
 ## Goals
 
-- NextAuth v5 (`next-auth@beta`) and `@auth/prisma-adapter` installed
-- Split auth config pattern in place for edge compatibility (`src/auth.config.ts` + `src/auth.ts`)
-- GitHub OAuth provider configured and working
-- `/dashboard/*` routes protected via `src/proxy.ts` — unauthenticated users redirect to sign-in
-- Session type extended with `user.id` in `src/types/next-auth.d.ts`
-- Visiting `/dashboard` unauthenticated redirects to NextAuth's default sign-in page
-- Signing in with Google redirects back to `/dashboard`
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Use `next-auth@beta` (not `@latest` — that installs v4)
-- Proxy file must live at `src/proxy.ts` (same level as `app/`), named export `export const proxy = auth(...)`
-- Use `session: { strategy: 'jwt' }` with the split config pattern
-- Do NOT set custom `pages.signIn` — use NextAuth's default page
-- Use Context7 to verify the latest NextAuth v5 conventions before writing code
-- Env vars needed: `AUTH_SECRET`, `CLIENT_ID`, `CLIENT_SECRET`
-- Files to create: `src/auth.config.ts`, `src/auth.ts`, `src/app/api/auth/[...nextauth]/route.ts`, `src/proxy.ts`, `src/types/next-auth.d.ts`
+<!-- Additional context, constraints, or details -->
 
 ## History
 
@@ -35,3 +23,5 @@ In Progress
 - **Prisma + Neon PostgreSQL Setup** — Prisma 7 installed with Neon PostgreSQL (serverless). Schema defines `User`, `Conversation`, `Message`, `FitInsight`, `TaskEntry` plus NextAuth models (`Account`, `Session`, `VerificationToken`) with cascade deletes and indexes. `prisma.config.ts` at root loads `DIRECT_URL` from `.env.local` for CLI operations; runtime uses pooler `DATABASE_URL` via `PrismaNeon` adapter. Client generated to `src/generated/prisma` (gitignored) via `postinstall` script. Initial migration `20260509065700_init` applied to Neon dev branch. Files: `prisma/schema.prisma`, `prisma.config.ts`, `src/lib/db.ts`.
 
 - **Seed Data** — Idempotent seed script at `prisma/seed.ts`, run via `npx prisma db seed`. Upserts demo user (`demo@mindframe.ai`), deletes and recreates 5 conversations (Career Alignment, Focus & Productivity, Burnout Prevention, Weekly Reflection, Planning & Execution) with 57 total messages, 1 `FitInsight` with 6 strengths and 5 conflicts, and 27 `TaskEntry` rows with randomized timestamps and ~75% completion rate. Seed command wired into `prisma.config.ts` via `migrations.seed` (Prisma 7 config). Import path uses `../src/generated/prisma/client` (explicit file, not directory). Files: `prisma/seed.ts`, `prisma.config.ts`.
+
+- **Auth Setup - NextAuth + Google OAuth** — NextAuth v5 (`next-auth@beta`) installed with `@auth/prisma-adapter`. Split config: `src/auth.config.ts` (edge-compatible, Google provider) + `src/auth.ts` (PrismaAdapter, JWT strategy, session callback adding `user.id`). Route handler at `src/app/api/auth/[...nextauth]/route.ts`. Proxy at `src/proxy.ts` (named export, Node.js runtime) protects `/dashboard/*` and redirects unauthenticated users to sign-in with callbackUrl. Session type extended with `user.id` in `src/types/next-auth.d.ts`. Minimal dashboard placeholder at `src/app/dashboard/page.tsx`. Fixed pre-existing `src/lib/db.ts` import (`@/generated/prisma` → `@/generated/prisma/client`). Env vars: `AUTH_SECRET`, `CLIENT_ID`, `CLIENT_SECRET` (Google OAuth). Google Console requires `http://localhost:3000/api/auth/callback/google` as authorized redirect URI.
