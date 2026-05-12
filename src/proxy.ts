@@ -1,5 +1,9 @@
-import { auth } from "@/auth";
+import NextAuth from "next-auth";
+import { authConfig } from "@/auth.config";
 import { NextResponse } from "next/server";
+
+// Use the edge-compatible config only — auth.ts imports bcryptjs which cannot run on the Edge runtime.
+const { auth } = NextAuth(authConfig);
 
 export const proxy = auth((req) => {
   const isLoggedIn = !!req.auth;
