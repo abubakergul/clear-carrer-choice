@@ -1,6 +1,6 @@
 "use client";
 
-type Props = { variant: "pattern" | "continue" };
+type Props = { variant: "pattern" | "continue" | "dead" };
 
 const CONTENT = {
   pattern: {
@@ -16,6 +16,13 @@ const CONTENT = {
     subtext:
       "Sign up to keep going. The more you share, the clearer the picture gets — and the closer you get to knowing what actually fits.",
     cta: "Continue the conversation →",
+  },
+  dead: {
+    icon: "○",
+    heading: "We need more to go on.",
+    subtext:
+      "I couldn't get enough from this conversation to find a pattern. Sign up and start fresh when you're ready — it only takes a few minutes.",
+    cta: "Start fresh →",
   },
 };
 
@@ -48,20 +55,18 @@ export default function SignupWall({ variant }: Props) {
 
           <div className="flex flex-col gap-3">
             <a
-              href="/auth/signup"
-              className="w-full rounded-xl bg-violet-600 py-3 text-sm font-semibold text-white transition hover:bg-violet-700"
+              href="/register"
+              className="w-full rounded-xl bg-violet-600 py-3 text-sm font-semibold text-white transition-colors hover:bg-violet-700 active:bg-violet-800"
             >
               {c.cta}
             </a>
             <a
-              href="/auth/login"
-              className="w-full rounded-xl border border-stone-200 py-3 text-sm font-medium text-stone-600 transition hover:bg-stone-50"
+              href="/sign-in"
+              className="w-full rounded-xl border border-stone-200 py-3 text-sm font-medium text-stone-600 transition-colors hover:border-stone-300 hover:bg-stone-100 active:bg-stone-200"
             >
               Already have an account? Log in
             </a>
           </div>
-
-          <p className="text-xs text-stone-400">Free. No card required.</p>
         </div>
       </div>
     </div>
