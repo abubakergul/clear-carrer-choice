@@ -4,8 +4,19 @@ import { useEffect, useRef, useState } from "react";
 import SignupWall from "./SignupWall";
 
 type Message = { role: "user" | "assistant"; content: string };
-type WallVariant = "pattern" | "continue";
+type WallVariant = "pattern" | "continue" | "dead";
 type EducationStage = "school" | "college" | "graduating" | "graduated";
+
+const GARBAGE_ANSWERS = new Set([
+  "ok", "okay", "k", "kk", "idk", "nah", "yep", "nope", "sure",
+  "fine", "yeah", "none", "dunno", "nothing", "hmm", "hm", "lol",
+  "haha", "no", "yes", "y", "n", "maybe", "idc", "idek", "whatever",
+]);
+
+function isGarbageAnswer(text: string): boolean {
+  const t = text.trim().toLowerCase();
+  return t.length <= 2 || GARBAGE_ANSWERS.has(t);
+}
 
 const EDUCATION_OPTIONS: { value: EducationStage; label: string; sub: string }[] = [
   { value: "school",     label: "Still in school",              sub: "Figuring out what to study or aim for" },
@@ -138,6 +149,7 @@ export default function ChatInterface() {
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const sessionIdRef = useRef("");
+  const garbageStreakRef = useRef(0);
 
   useEffect(() => {
     const navEntry = performance?.getEntriesByType?.("navigation")?.[0] as PerformanceNavigationTiming | undefined;
@@ -194,7 +206,7 @@ export default function ChatInterface() {
     return null;
   }
 
-  async function send(overrideText?: string) {
+  async function send(overrideText?: string, isChip = false) {
     const text = (overrideText ?? input).trim();
     if (!text || isStreaming || showWall) return;
 
@@ -205,6 +217,25 @@ export default function ChatInterface() {
     const userMsg: Message = { role: "user", content: text };
     const next = [...messages, userMsg];
     setMessages(next);
+
+    // Dead session detection — 3 consecutive garbage answers (chip picks are never garbage)
+    const newStreak = (!isChip && isGarbageAnswer(text)) ? garbageStreakRef.current + 1 : 0;
+    garbageStreakRef.current = newStreak;
+
+    if (newStreak >= 3) {
+      const dead: Message = {
+        role: "assistant",
+        content: "I need real answers to help you — I can't build anything from this. Sign up to try again when you're ready.",
+      };
+      setTimeout(() => {
+        setMessages((p) => [...p, dead]);
+        setTimeout(() => {
+          setWallVariant("dead");
+          sessionStorage.setItem("ccc_wall", "dead");
+        }, 700);
+      }, 400);
+      return;
+    }
 
     if (userCount + 1 >= SAFETY_MAX) {
       const closing: Message = {
@@ -356,7 +387,7 @@ export default function ChatInterface() {
                           {OPENING_CHIPS.map((chip) => (
                             <button
                               key={chip}
-                              onClick={() => send(chip)}
+                              onClick={() => send(chip, true)}
                               disabled={isStreaming}
                               className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-left text-xs font-medium text-violet-700 transition hover:border-violet-400 hover:bg-violet-100 disabled:opacity-40"
                             >
@@ -375,7 +406,7 @@ export default function ChatInterface() {
                             {chips.map((chip) => (
                               <button
                                 key={chip}
-                                onClick={() => send(chip)}
+                                onClick={() => send(chip, true)}
                                 disabled={isStreaming}
                                 className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-600 transition hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 disabled:opacity-40"
                               >

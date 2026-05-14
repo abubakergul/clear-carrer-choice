@@ -7,10 +7,14 @@ export const authConfig = {
     Google({
       clientId: process.env.CLIENT_ID,
       clientSecret: process.env.CLIENT_SECRET,
+      allowDangerousEmailAccountLinking: true,
     }),
     Credentials({
       // Actual validation is done in auth.ts (Node.js runtime) where bcrypt is available.
       authorize: () => null,
     }),
   ],
+  pages: {
+    signIn: "/sign-in",
+  },
 } satisfies NextAuthConfig;
