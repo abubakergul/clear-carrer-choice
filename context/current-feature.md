@@ -1,16 +1,29 @@
-# Current Feature
+# Current Feature: Data Architecture
 
 ## Status
 
-<!-- Not Started | In Progress | Completed -->
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Migrate Prisma schema to new data architecture (second migration)
+- Add `Exploration` model: tracks one active exploration per user, supports `active | completed | skipped | expired` status, optional `aiInterpretation`, expiry/completion/skip timestamps, linked to `FitInsight` and `Reflection`
+- Add `Reflection` model: stores structured behavioral signals (`selectedSignals String[]`) per exploration — no free-text
+- Update `FitInsight`: replace `strengths`/`conflicts` arrays with `directions String[]` and `tensions String[]`, add `version Int @default(1)` and `updatedAt`
+- Update `User`: add `explorations Exploration[]` relation
+- Remove `TaskEntry` model (replaced by `Exploration` + `Reflection`)
+- Apply migration via `npx prisma migrate dev` and confirm schema in sync
+- No scores, rankings, personality labels, or completion metrics stored anywhere in the schema
 
 ## Notes
 
-<!-- Additional context, constraints, or details -->
+- This is the **second migration** — builds on the init migration (`20260509065700_init`)
+- Philosophy: store reactions and patterns over time, not outcomes
+- Only one `Exploration` should be active per user at a time (enforced at app level, not DB constraint)
+- `Reflection.selectedSignals` is a structured signal array (curiosity, confusion, excitement, boredom, energy, avoidance, etc.) — not free-text
+- `FitInsight` evolves over time (version field) as explorations and reflections accumulate
+- Guest conversations still use `sessionId`; claimed after signup to generate initial insight
+- `TaskEntry` model existed in seed data but is replaced by this architecture — seed script will need updating
 
 ## History
 

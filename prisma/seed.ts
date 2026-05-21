@@ -113,41 +113,40 @@ const CONVERSATIONS = [
   },
 ];
 
-const TASK_ENTRIES = [
-  // Deep work
-  { description: "Refactor authentication flow", day: 1 },
-  { description: "Build dashboard analytics module", day: 2 },
-  { description: "Optimize Prisma queries for feed endpoint", day: 3 },
-  { description: "Research AI memory system patterns", day: 4 },
-  { description: "Implement search indexing pipeline", day: 1 },
-  { description: "Debug WebSocket connection drop", day: 5 },
-  { description: "Pair programming session on auth bug", day: 4 },
-  // Planning
-  { description: "Weekly roadmap review", day: 1 },
-  { description: "Sprint planning session", day: 2 },
-  { description: "Inbox cleanup and triage", day: 5 },
-  { description: "Prioritize feature backlog", day: 1 },
-  { description: "Review Q3 OKRs and adjust scope", day: 3 },
-  { description: "Write technical doc for API endpoints", day: 3 },
-  // Learning
-  { description: "Read Prisma optimization article", day: 3 },
-  { description: "Watch TypeScript architecture talk", day: 4 },
-  { description: "Explore vector embeddings for search", day: 2 },
-  { description: "Study React rendering patterns", day: 5 },
-  { description: "Review system design interview concepts", day: 6 },
-  { description: "Learn about edge runtime constraints", day: 4 },
-  // Health & Recovery
-  { description: "Evening walk", day: 3 },
-  { description: "Morning stretch session", day: 2 },
-  { description: "No-screen recovery break", day: 4 },
-  { description: "Morning journaling", day: 1 },
-  { description: "Offline lunch break", day: 5 },
-  { description: "Afternoon walk between focus blocks", day: 3 },
-  { description: "Digital detox after 8pm", day: 7 },
-  { description: "Code review for team PRs", day: 2 },
+const EXPLORATIONS = [
+  {
+    title: "Spend 30 minutes reading about a field you've dismissed",
+    prompt: "Pick a career area you've always assumed wasn't for you. Read about what someone actually does day-to-day. Notice what comes up — curiosity, boredom, resistance, or something unexpected.",
+    status: "completed",
+    daysAgo: 15,
+    signals: ["curiosity", "surprise", "mild resistance"],
+    aiInterpretation: "You engaged with the material longer than the task required, which suggests the field triggered genuine interest despite your assumptions. The resistance may reflect identity conflict rather than actual disinterest.",
+  },
+  {
+    title: "Teach something you know to a friend or in writing",
+    prompt: "Explain a skill or concept you're comfortable with to someone unfamiliar with it. Notice whether explaining it energizes or drains you.",
+    status: "completed",
+    daysAgo: 10,
+    signals: ["energy", "engagement", "flow"],
+    aiInterpretation: "High energy while teaching suggests you derive meaning from sharing knowledge, not just from doing the work. This pattern points toward roles with a mentorship or communication component.",
+  },
+  {
+    title: "Do one hour of solo, unstructured creative work",
+    prompt: "Set aside an hour with no goal except to make or explore something freely — writing, sketching, building, designing. No output required. Notice how your attention moves.",
+    status: "completed",
+    daysAgo: 5,
+    signals: ["curiosity", "excitement", "desire for structure"],
+    aiInterpretation: "The pull toward structure mid-session is informative — you engage with open-ended exploration but self-impose constraints to stay focused. This suggests you need creative latitude within a defined container, not total ambiguity.",
+  },
+  {
+    title: "Shadow or interview someone in a role you're curious about",
+    prompt: "Reach out to someone whose work seems interesting and ask for 20 minutes to learn about their day. If that's not possible, find a detailed interview or video online. Notice your reaction as they describe their reality.",
+    status: "active",
+    daysAgo: 1,
+    signals: [],
+    aiInterpretation: null,
+  },
 ];
-
-const FEEDBACK_VALUES = ["energized", "focused", "neutral", "distracted", "exhausted"];
 
 async function main() {
   console.log("Seeding database...");
@@ -165,9 +164,9 @@ async function main() {
   console.log(`  User: ${user.email} (${user.id})`);
 
   // Clear existing seeded data before recreating (idempotency)
-  await prisma.conversation.deleteMany({ where: { userId: user.id } });
-  await prisma.taskEntry.deleteMany({ where: { userId: user.id } });
+  await prisma.exploration.deleteMany({ where: { userId: user.id } });
   await prisma.fitInsight.deleteMany({ where: { userId: user.id } });
+  await prisma.conversation.deleteMany({ where: { userId: user.id } });
 
   for (const conv of CONVERSATIONS) {
     const baseDate = daysAgo(conv.daysAgo, rand(9, 14), rand(0, 45));
@@ -194,49 +193,64 @@ async function main() {
     console.log(`  Conversation: ${conv.theme} (${conv.messages.length} messages)`);
   }
 
-  await prisma.fitInsight.create({
+  const fitInsight = await prisma.fitInsight.create({
     data: {
       userId: user.id,
       summary:
         "This user performs best in autonomous, low-interruption environments with extended blocks of focused time. Frequent context switching, meeting-heavy schedules, and reactive communication patterns consistently reduce energy and engagement. They show strong capacity for independent problem-solving and technical depth, but require visible impact and clear ownership to sustain motivation over time.",
-      strengths: [
-        "Deep focus capability",
-        "Systems thinking",
-        "Fast learner across technical domains",
-        "Reflective mindset and strong self-awareness",
-        "Independent problem solving",
-        "Consistent execution under clear constraints",
+      directions: [
+        "Independent, deep-focus work with clear ownership",
+        "Environments with visible output and user-facing impact",
+        "Roles that reward systems thinking and technical depth",
+        "Async-first teams with autonomy over structure",
+        "Work that involves teaching, mentoring, or knowledge transfer",
+        "Creative work with defined constraints rather than total ambiguity",
       ],
-      conflicts: [
-        "Context switching fatigue",
-        "Meeting overload — loses energy in long synchronous sessions",
-        "Difficulty disconnecting after work",
+      tensions: [
+        "Context switching fatigue in reactive, meeting-heavy environments",
+        "Difficulty sustaining motivation when output is invisible",
         "Perfectionism loops on low-stakes tasks",
         "Overcommitting when boundaries are unclear",
+        "Resistance to ambiguity without a structural container",
       ],
+      version: 1,
     },
   });
   console.log("  FitInsight: created");
 
-  for (const entry of TASK_ENTRIES) {
-    const entryDate = daysAgo(rand(2, 21), rand(8, 18), rand(0, 55));
-    const isCompleted = Math.random() < 0.75;
+  for (const exp of EXPLORATIONS) {
+    const createdAt = daysAgo(exp.daysAgo, rand(9, 14), rand(0, 45));
+    const isCompleted = exp.status === "completed";
     const completedAt = isCompleted
-      ? new Date(entryDate.getTime() + rand(20, 90) * 60 * 1000)
+      ? new Date(createdAt.getTime() + rand(30, 90) * 60 * 1000)
       : null;
 
-    await prisma.taskEntry.create({
+    const exploration = await prisma.exploration.create({
       data: {
         userId: user.id,
-        day: entry.day,
-        description: entry.description,
-        feedback: FEEDBACK_VALUES[rand(0, FEEDBACK_VALUES.length - 1)],
+        fitInsightId: fitInsight.id,
+        title: exp.title,
+        prompt: exp.prompt,
+        status: exp.status,
+        aiInterpretation: exp.aiInterpretation ?? null,
+        createdAt,
         completedAt,
-        createdAt: entryDate,
+        expiresAt: new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000),
       },
     });
+
+    if (isCompleted && exp.signals.length > 0) {
+      await prisma.reflection.create({
+        data: {
+          explorationId: exploration.id,
+          selectedSignals: exp.signals,
+          createdAt: completedAt!,
+        },
+      });
+    }
+
+    console.log(`  Exploration: "${exp.title.slice(0, 50)}..." (${exp.status})`);
   }
-  console.log(`  TaskEntries: ${TASK_ENTRIES.length} created`);
 
   console.log("Seed complete.");
 }

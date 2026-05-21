@@ -21,19 +21,20 @@ model User {
 
   conversations Conversation[]
   fitInsight    FitInsight?
-  experiments   TaskEntry[]
+  explorations  Exploration[]
   accounts      Account[]
   sessions      Session[]
 }
 
 model Conversation {
-  id        String    @id @default(cuid())
-  userId    String?
-  sessionId String
-  createdAt DateTime  @default(now())
+  id             String    @id @default(cuid())
+  userId         String?
+  sessionId      String
+  educationStage String?
+  createdAt      DateTime  @default(now())
 
-  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  messages  Message[]
+  user           User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages       Message[]
 
   @@index([userId])
   @@index([sessionId])
@@ -52,29 +53,47 @@ model Message {
 }
 
 model FitInsight {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  summary   String
-  strengths String[]
-  conflicts String[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  summary    String
+  directions String[]
+  tensions   String[]
+  version    Int      @default(1)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model TaskEntry {
-  id          String    @id @default(cuid())
-  userId      String
-  day         Int       // 1–7
-  description String
-  feedback    String?   // "felt_good" | "neutral" | "drained"
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
+model Exploration {
+  id               String    @id @default(cuid())
+  userId           String
+  fitInsightId     String?
+  title            String
+  prompt           String
+  status           String    // "active" | "completed" | "skipped" | "expired"
+  aiInterpretation String?
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime?
+  completedAt      DateTime?
+  skippedAt        DateTime?
 
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reflections      Reflection[]
 
   @@index([userId])
+  @@index([status])
+}
+
+model Reflection {
+  id              String   @id @default(cuid())
+  explorationId   String
+  selectedSignals String[]
+  createdAt       DateTime @default(now())
+
+  exploration     Exploration @relation(fields: [explorationId], references: [id], onDelete: Cascade)
+
+  @@index([explorationId])
 }
 
 // ─── NextAuth models ──────────────────────────────────────────────────────────
