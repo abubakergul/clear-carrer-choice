@@ -1,29 +1,16 @@
-# Current Feature: Data Architecture
+# Current Feature
 
 ## Status
 
-In Progress
+<!-- Not Started | In Progress | Completed -->
 
 ## Goals
 
-- Migrate Prisma schema to new data architecture (second migration)
-- Add `Exploration` model: tracks one active exploration per user, supports `active | completed | skipped | expired` status, optional `aiInterpretation`, expiry/completion/skip timestamps, linked to `FitInsight` and `Reflection`
-- Add `Reflection` model: stores structured behavioral signals (`selectedSignals String[]`) per exploration — no free-text
-- Update `FitInsight`: replace `strengths`/`conflicts` arrays with `directions String[]` and `tensions String[]`, add `version Int @default(1)` and `updatedAt`
-- Update `User`: add `explorations Exploration[]` relation
-- Remove `TaskEntry` model (replaced by `Exploration` + `Reflection`)
-- Apply migration via `npx prisma migrate dev` and confirm schema in sync
-- No scores, rankings, personality labels, or completion metrics stored anywhere in the schema
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- This is the **second migration** — builds on the init migration (`20260509065700_init`)
-- Philosophy: store reactions and patterns over time, not outcomes
-- Only one `Exploration` should be active per user at a time (enforced at app level, not DB constraint)
-- `Reflection.selectedSignals` is a structured signal array (curiosity, confusion, excitement, boredom, energy, avoidance, etc.) — not free-text
-- `FitInsight` evolves over time (version field) as explorations and reflections accumulate
-- Guest conversations still use `sessionId`; claimed after signup to generate initial insight
-- `TaskEntry` model existed in seed data but is replaced by this architecture — seed script will need updating
+<!-- Additional context, constraints, or details -->
 
 ## History
 
@@ -42,3 +29,5 @@ In Progress
 - **Auth Credentials - Email/Password Provider** — Added `password String?` to `User` model (migration `20260510020057_add_password_to_user`). Credentials placeholder (`authorize: () => null`) added to `src/auth.config.ts` for edge compatibility. `src/auth.ts` overrides with full bcrypt validation, filtering the placeholder from the spread to avoid duplicate provider. `src/proxy.ts` fixed to use `NextAuth(authConfig)` directly (not `@/auth`) to prevent `bcryptjs` from loading on the Edge runtime. `POST /api/auth/register` validates inputs, checks for existing user, hashes with bcrypt (cost 12), creates user. Files: `src/auth.config.ts`, `src/auth.ts`, `src/proxy.ts`, `src/app/api/auth/register/route.ts`, `prisma/schema.prisma`.
 
 - **Auth UI - Sign In, Register & Sign Out** — Custom `/sign-in` page (email/password + Google, controlled inputs, `signOut`-first fix for `OAuthAccountNotLinked`). Custom `/register` page with client-side validation and `confirmPassword` in body. `(auth)` route group with server-side session guard (redirects to `/dashboard` if already signed in). Dashboard layout with fixed sidebar: branding, nav slot, user section at bottom. `UserMenu`: opens on hover with 120 ms close delay, chevron indicator, red "Sign out" with icon, "View profile" link. `UserAvatar`: Google image or initials fallback (violet background). `Toast`: auto-dismiss (3 s), success/error/info variants. `auth.config.ts` updated with `pages.signIn` and `allowDangerousEmailAccountLinking`. `proxy.ts` redirect updated to `/sign-in`. `SignupWall` links fixed to `/register` and `/sign-in`. Landing page (`/`) and `/chat` redirect logged-in users to `/dashboard`. `next.config.ts` adds `lh3.googleusercontent.com` for Google avatars. Files: `src/actions/auth.ts`, `src/app/(auth)/`, `src/app/dashboard/layout.tsx`, `src/components/dashboard/UserMenu.tsx`, `src/components/dashboard/WelcomeToast.tsx`, `src/components/ui/Toast.tsx`, `src/components/ui/UserAvatar.tsx`, `src/auth.config.ts`, `src/proxy.ts`, `src/components/chat/SignupWall.tsx`, `src/app/page.tsx`, `src/app/chat/page.tsx`, `next.config.ts`.
+
+- **Data Architecture** — Prisma schema migrated to new data model. `TaskEntry` removed; replaced by `Exploration` (title, prompt, status `active|completed|skipped|expired`, optional `aiInterpretation`, expiry/completion/skip timestamps) and `Reflection` (structured `selectedSignals String[]`). `FitInsight` updated: `strengths`→`directions`, `conflicts`→`tensions`, added `version Int @default(1)`. `Conversation` gains `educationStage String?`. `User` relation updated from `experiments` to `explorations`. Schema pushed to Neon dev via `prisma db push --accept-data-loss`. Prisma client regenerated. Seed updated with 4 demo explorations (3 completed with reflections, 1 active) and revised `FitInsight` with directions/tensions. Note: no migration file created — run `npx prisma migrate dev --name data_architecture` from an interactive terminal before deploying to production. Files: `prisma/schema.prisma`, `prisma/seed.ts`, `context/Data Architecture.md`.
