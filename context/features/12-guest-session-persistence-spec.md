@@ -1,121 +1,312 @@
-# Guest Session Persistence + FitInsight Generation
+# 12-guest-session-persistence-spec.md
+
+# Guest Session Persistence + Initial Insight Generation
 
 ## Overview
 
-Wire up the guest conversation so nothing is lost when a user signs up or logs in.
-Right now messages live only in React state and sessionStorage — they disappear on
-registration. This feature saves every message to the database as the conversation
-happens, claims the conversation on auth, generates the FitInsight from it, and
-redirects the user to their result.
+The conversation should never disappear when a user signs up.
+
+Every guest conversation is persisted in the database while it happens.
+After authentication, the conversation is claimed by the user and used to generate the initial Fit Insight and first exploration.
+
+The goal is continuity.
+
+The user should feel:
+
+> “The app remembers me and understands where I left off.”
 
 ---
 
-## Current State (before this feature)
+# Current State (Before This Feature)
 
-- Chat API (`/api/chat`) streams AI responses but writes nothing to the DB.
-- `Conversation` and `Message` Prisma tables exist but are empty.
-- On sign-up the guest conversation is lost — no insight is ever generated.
-- `FitInsight` table exists but is never populated for real users.
+Currently:
 
----
-
-## Goals
-
-1. Persist every guest message to the DB under a browser `sessionId`
-2. On registration or sign-in, claim the conversation (set `userId`)
-3. Generate a `FitInsight` from the saved messages immediately after claiming
-4. Redirect the new/returning user to the result page (`/result`) to see their insight
-5. If a logged-in user has no insight yet (edge case), allow them to re-run the flow
+* chat messages exist only in React state + sessionStorage
+* conversations are lost after signup/login
+* database tables are mostly unused
+* no real FitInsight is generated
+* no exploration flow exists
 
 ---
 
-## Data Flow
+# Goals
 
-### Step 1 — Session ID
+## Primary Goals
 
-On the very first user message in `/chat`:
-- Generate a UUID (`crypto.randomUUID()`) if one doesn't exist in `sessionStorage`
-- Store it as `sessionStorage.getItem("ccc_session_id")`
-- This ID persists for the browser tab session
+1. Persist guest conversations in real time
+2. Claim the conversation after authentication
+3. Generate an initial FitInsight
+4. Generate the first exploration
+5. Redirect users into the exploration flow
 
-### Step 2 — Create Conversation on First Message
+---
 
-When the first user message is sent, POST to `/api/chat/session` (new route):
+# High-Level Flow
+
+## Step 1 — Guest Starts Chat
+
+On first user message:
+
+* generate a browser `sessionId`
+* store in `sessionStorage`
+
+Key:
+
+```ts id="4b9t9y"
+ccc_session_id
 ```
+
+This persists only for the current browser session.
+
+---
+
+## Step 2 — Create Conversation Record
+
+On the first message:
+
+```http id="3m78kq"
 POST /api/chat/session
-Body: { sessionId, educationStage }
-Response: { conversationId }
 ```
-- Creates `Conversation { sessionId, userId: null }` in DB
-- Store `conversationId` in component state
 
-### Step 3 — Save Messages as They Happen
+Request:
 
-After each complete exchange (user message sent + AI response fully streamed):
-- Call a Server Action `saveMessages(conversationId, userMsg, aiMsg)`
-- Saves two `Message` rows to the DB
+```json id="q5m6s4"
+{
+  "sessionId": "...",
+  "educationStage": "college"
+}
+```
 
-### Step 4 — Claim on Auth
+Creates:
 
-After successful registration (`/api/auth/register`) or sign-in (`credentialsSignIn` /
-Google callback):
-- Read `sessionId` from `sessionStorage`
-- Call Server Action `claimConversation(sessionId)`:
-  ```ts
-  // Finds Conversation by sessionId where userId is null
-  // Sets userId = session.user.id
-  // Returns conversationId
-  ```
-- If no conversation found (user signed in on a different device): skip silently
+```text id="8s6t6r"
+Conversation {
+  sessionId,
+  userId: null
+}
+```
 
-### Step 5 — Generate FitInsight
+Returns:
 
-Immediately after claiming, call `generateFitInsight(conversationId, userId)`:
-- Reads all `Message` rows for the conversation
-- Calls OpenAI with the insight generation prompt (see below)
-- Parses the JSON response
-- Upserts `FitInsight { userId, summary, strengths, conflicts }`
-- Generates 7 `TaskEntry` rows (day 1–7) using the tasks prompt
-
-### Step 6 — Redirect to Result
-
-After FitInsight is created → redirect to `/result`
+```json id="4y5o4s"
+{
+  "conversationId": "..."
+}
+```
 
 ---
 
-## Routes
+# Step 3 — Persist Messages
 
-| Route | Purpose |
-|-------|---------|
-| `POST /api/chat/session` | Create a Conversation row for a new guest session |
-| `/result` | Show the FitInsight (protected — redirect to `/sign-in` if no session) |
+After every completed exchange:
+
+* save user message
+* save assistant message
+
+Messages should be persisted AFTER streaming finishes successfully.
+
+Use:
+
+```ts id="6n1n2y"
+saveMessages(conversationId, userMessage, assistantMessage)
+```
+
+This creates two `Message` rows.
 
 ---
 
-## FitInsight Generation Prompt
+# Step 4 — Authentication Claim
 
-Store in `src/lib/prompts/insight.ts`
+After successful:
 
+* signup
+* login
+* OAuth callback
+
+The frontend reads:
+
+```ts id="n6k2ha"
+sessionStorage.getItem("ccc_session_id")
 ```
-You are analyzing a career exploration conversation to identify patterns.
 
-Based on the conversation below, return a JSON object with:
-- summary: 2-3 sentences describing the user's pattern (what they lean toward, avoid, and care about)
-- strengths: 4-6 short phrases describing aligned career directions (not job titles, directions)
-- conflicts: 3-5 short phrases describing tensions or mismatches
+Then calls:
+
+```ts id="m9q3w1"
+claimConversation(sessionId)
+```
+
+Server action:
+
+* finds latest unclaimed conversation
+* sets `userId`
+* returns `conversationId`
+
+If none exists:
+
+* fail silently
+
+Example:
+
+* user switched devices
+* session expired
+
+---
+
+# Step 5 — Generate Initial Fit Insight
+
+Immediately after claim:
+
+```ts id="a6f9f2"
+generateInitialInsight(conversationId, userId)
+```
+
+This:
+
+1. loads conversation messages
+2. sends them to OpenAI
+3. generates:
+
+   * summary
+   * directions
+   * tensions
+4. saves `FitInsight`
+
+The insight is NOT:
+
+* a recommendation
+* a final answer
+
+It is:
+
+> an initial hypothesis worth exploring.
+
+---
+
+# Step 6 — Generate First Exploration
+
+After FitInsight creation:
+
+```ts id="n1t5wa"
+generateFirstExploration(userId)
+```
+
+Important:
+
+* generate ONLY ONE exploration initially
+* explorations are sequential
+* avoid pre-generating 7 tasks
+
+The first exploration should:
+
+* feel approachable
+* create curiosity
+* reduce intimidation
+
+---
+
+# Step 7 — Redirect To Result
+
+After successful generation:
+
+```text id="m3n8xq"
+/result
+```
+
+The result page introduces:
+
+* initial insight
+* possible directions
+* tensions
+* first exploration CTA
+
+---
+
+# Routes
+
+| Route                    | Purpose                      |
+| ------------------------ | ---------------------------- |
+| `POST /api/chat/session` | Creates Conversation         |
+| `/result`                | Shows initial insight        |
+| `/home`                  | Main exploration home screen |
+
+---
+
+# Session Rules
+
+## Same Browser Session
+
+Conversation restores automatically.
+
+## New Browser Session
+
+Fresh start.
+
+## Logged-In User With Existing Insight
+
+Redirect:
+
+```text id="o5s2fo"
+/home
+```
+
+## Logged-In User Without Insight
+
+Allow:
+
+```text id="5t6xj2"
+/chat
+```
+
+Then regenerate insight after conversation.
+
+---
+
+# AI Insight Prompt
+
+Store:
+
+```text id="v8r7mq"
+src/lib/prompts/insight.ts
+```
+
+---
+
+## Prompt
+
+```text id="t8n9pb"
+You are analyzing a career exploration conversation.
+
+Your job is NOT to recommend careers.
+
+Your job is to identify:
+- patterns
+- tensions
+- motivations
+- environmental preferences
+- curiosity signals
+- avoidance patterns
+
+Return ONLY valid JSON:
+
+{
+  "summary": "2-3 sentence summary",
+  "directions": [
+    "Direction 1",
+    "Direction 2"
+  ],
+  "tensions": [
+    "Tension 1",
+    "Tension 2"
+  ]
+}
 
 Rules:
-- Never say "you should be X"
-- Write as patterns and tendencies, not diagnoses
-- Keep each phrase under 8 words
-- Return ONLY valid JSON, no markdown
-
-Format:
-{
-  "summary": "...",
-  "strengths": ["...", "..."],
-  "conflicts": ["...", "..."]
-}
+- Never say “you should become”
+- Never sound certain
+- Use exploratory language
+- Keep directions broad enough to explore
+- Keep tensions emotionally realistic
+- No markdown
 
 Conversation:
 {messages}
@@ -123,71 +314,146 @@ Conversation:
 
 ---
 
-## Result Page (`/result`)
+# First Exploration Generation Prompt
 
-### Route
-`/result` — protected. Redirect to `/sign-in` if no session.
+Store:
 
-### Content (3 sections)
-
-**Section 1 — Pattern Summary**
-> "Based on our conversation, here's what I noticed:"
-> `{fitInsight.summary}`
-
-**Section 2 — What fits**
-Label: "Directions that might align:"
-Render each `strengths` item as a tag/pill.
-
-**Section 3 — What conflicts**
-Label: "Tensions worth knowing:"
-Render each `conflicts` item.
-
-**Disclaimer** (always shown):
-> "This is a starting point, not a final answer. Use it to explore, not to decide."
-
-**CTA:**
-"See your 7-day exploration →" → `/dashboard`
+```text id="4s2z0r"
+src/lib/prompts/first-exploration.ts
+```
 
 ---
 
-## Return Visit Logic
+## Prompt
 
-| State | Behavior |
-|-------|----------|
-| Logged in + has FitInsight | `/` and `/chat` → `/dashboard` (already implemented) |
-| Logged in + no FitInsight | `/chat` → allow chat; after wall → re-claim + re-generate |
-| Guest + same browser tab | sessionStorage restores conversation (current behavior) |
-| Guest + new tab/session | Fresh start — sessionStorage cleared |
+```text id="c8q0ko"
+Generate ONE beginner-friendly career exploration.
+
+The goal is NOT skill testing.
+
+The goal is helping the user notice:
+- curiosity
+- intimidation
+- energy
+- engagement
+- resistance
+
+The exploration must:
+- take under 15 minutes
+- feel emotionally safe
+- be extremely specific
+- require no prior experience
+- avoid homework feeling
+
+Return ONLY JSON:
+
+{
+  "title": "...",
+  "prompt": "..."
+}
+
+User directions:
+{directions}
+
+User tensions:
+{tensions}
+```
 
 ---
 
-## Files to Create / Modify
+# Files To Create
 
-**New:**
-- `src/app/api/chat/session/route.ts` — create Conversation row
-- `src/app/result/page.tsx` — FitInsight result page
-- `src/actions/conversation.ts` — `saveMessages`, `claimConversation`, `generateFitInsight`
-- `src/lib/prompts/insight.ts` — FitInsight generation prompt
+## New
 
-**Modified:**
-- `src/components/chat/ChatInterface.tsx` — generate sessionId, call session API, save messages, claim on wall click
-- `src/components/chat/SignupWall.tsx` — trigger claim + insight generation before redirecting
-- `src/app/chat/page.tsx` — handle logged-in with no FitInsight edge case
+```text id="t7m0rk"
+src/actions/conversation.ts
+src/app/api/chat/session/route.ts
+src/lib/prompts/insight.ts
+src/lib/prompts/first-exploration.ts
+src/app/result/page.tsx
+```
+
+---
+
+# Files To Modify
+
+```text id="d8m6ao"
+src/components/chat/ChatInterface.tsx
+src/components/chat/SignupWall.tsx
+src/app/chat/page.tsx
+```
 
 ---
 
-## Edge Cases
+# Edge Cases
 
-- **User signs in on a different device** — no `sessionId` in sessionStorage → skip claim, show empty dashboard with prompt to start a new chat
-- **AI generation fails** — show error on result page with "Try again" button that re-runs generation
-- **User registers but closes tab before insight generates** — `Conversation` is claimed but `FitInsight` is missing → detect on dashboard and offer "Generate your insight" CTA
-- **User does multiple guest chats** — only the most recent unclaimed `Conversation` is claimed (order by `createdAt DESC`)
+## User Closes Tab During Generation
+
+Conversation remains persisted.
+
+If:
+
+* user exists
+* no FitInsight exists
+
+Then:
+
+```text id="d4n4zj"
+Generate your insight
+```
+
+should appear on `/home`.
 
 ---
+
+## AI Generation Failure
+
+Show:
+
+```text id="h9r2u3"
+We couldn't generate your insight yet.
+```
+
+CTA:
+
+```text id="u2q9x1"
+Try again
+```
+
+---
+
+## Multiple Guest Conversations
+
+Claim ONLY:
+
+* latest unclaimed conversation
+
+Ordered by:
+
+```text id="v0s1af"
+createdAt DESC
+```
+
+---
+
+# Important Product Rules
+
+The system should NEVER:
+
+* claim certainty
+* assign identity labels
+* generate personality types
+* produce ranked career lists
+
+The system should ALWAYS:
+
+* frame outputs as exploration
+* encourage movement
+* reduce pressure
+* preserve emotional trust
 
 ## References
 
 - `@context/project-overview.md`
-- `@context/features/010-result-page.md`
-- `@context/features/09-dashboard.md`
-- `prisma/schema.prisma` — `Conversation`, `Message`, `FitInsight`, `TaskEntry`
+- `@context/features/05-ai-conversation.md`
+- `@context/features/11-auth-phase-3-spec.md`

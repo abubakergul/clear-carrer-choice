@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import UserMenu from "@/components/dashboard/UserMenu";
+import ClaimRedirector from "@/components/dashboard/ClaimRedirector";
 
 export default async function DashboardLayout({
   children,
@@ -38,7 +39,10 @@ export default async function DashboardLayout({
       </aside>
 
       {/* Main */}
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main className="flex-1 overflow-auto">
+        <ClaimRedirector />
+        {children}
+      </main>
     </div>
   );
 }

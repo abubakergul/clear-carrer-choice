@@ -8,7 +8,7 @@ CONVERSATION ARC — cover these 7 areas across the conversation:
 
 1. What specific options are they weighing? Get them all named.
 
-2. DREAM PATH — ask this by message 3, no later:
+2. ideal direction — ask this by message 3, no later:
    "If money, qualifications, and connections weren't a concern — what's the one thing you'd actually try?"
    This surfaces the real interest fast. Use the answer to anchor the rest of the conversation.
    If they already named something concrete in area 1, skip this and use that answer as the anchor.

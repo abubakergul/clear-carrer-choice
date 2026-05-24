@@ -1,16 +1,42 @@
-# Current Feature
+# Current Feature: Guest Session Persistence + Initial Insight Generation
 
 ## Status
 
-<!-- Not Started | In Progress | Completed -->
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Persist every guest conversation to the DB in real time (user + assistant message pairs after each exchange)
+- Create a `Conversation` record on the first user message, keyed by `ccc_session_id` in sessionStorage
+- After successful signup, login, or OAuth: claim the conversation (set `userId`), generate a `FitInsight`, generate the first `Exploration`, redirect to `/result`
+- `/result` page shows summary, directions, tensions, and first exploration CTA
+- Session rules: same browser session restores; new session starts fresh; logged-in user with existing insight is redirected to `/dashboard`; logged-in user without insight can access `/chat`
 
 ## Notes
 
-<!-- Additional context, constraints, or details -->
+- Session storage key: `ccc_session_id` (was `ccc_session` — fixed as part of this feature)
+- Bug fix included: `PATTERN_TRIGGER` and `CONTINUE_TRIGGER` in `ChatInterface.tsx` did not match the strings the conversation prompt instructs the AI to output — the signup wall would never trigger. Fixed to match the actual prompt.
+- Post-auth flow uses a `/claim` page (client component) that reads `ccc_session_id` from sessionStorage, calls the `claimAndGenerate` server action, then redirects to `/result`
+- `claimAndGenerate` is a single combined server action: claim → load messages → generate FitInsight → generate first Exploration
+- AI calls use the OpenAI Responses API (`openai.responses.create`) consistent with the existing chat route
+- `/home` is referenced in the spec as the destination for users with an existing insight, but that page doesn't exist yet — `/dashboard` is used as the fallback until feature 16 is built
+- Prompts stored in `src/lib/prompts/insight.ts` and `src/lib/prompts/first-exploration.ts` per architecture convention
+
+## Files Created
+
+- `src/lib/prompts/insight.ts`
+- `src/lib/prompts/first-exploration.ts`
+- `src/app/api/chat/session/route.ts`
+- `src/actions/conversation.ts`
+- `src/app/claim/page.tsx`
+- `src/app/result/page.tsx`
+
+## Files Modified
+
+- `src/components/chat/ChatInterface.tsx`
+- `src/actions/auth.ts`
+- `src/app/(auth)/sign-in/page.tsx`
+- `src/app/chat/page.tsx`
 
 ## History
 

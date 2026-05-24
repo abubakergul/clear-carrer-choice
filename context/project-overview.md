@@ -1,285 +1,516 @@
 # ClearCareerChoice — Project Overview
 
-## What We're Building
+## What We’re Building
 
-**ClearCareerChoice** is an AI-powered career clarity app for students who feel stuck, anxious, or unsure about what to pursue.
+ClearCareerChoice is an AI-powered career exploration app for students who feel stuck, overwhelmed, or afraid of choosing the wrong path.
 
-This is not a quiz.
-This is not a list of career options.
+This is NOT:
 
-This is a **short conversation that leads to a testable hypothesis about you — and a way to verify it in real life before you waste time on the wrong path.**
+* a personality quiz
+* a career recommendation engine
+* a list of “best careers for you”
 
-**Core Idea:** Help users **stop guessing** their career by **testing what fits in reality.**
+This IS:
 
-**Positioning:** "Don't guess your career. Test it before you commit."
+* a pattern detection system
+* an exploration engine
+* a way to reduce uncertainty through real-world testing
 
----
+The goal is not to instantly decide someone’s future.
 
-## The Real Problem
-
-Students are not just confused. They are:
-
-- Afraid of choosing wrong and wasting years
-- Overwhelmed by too many options
-- Stuck in overthinking without action
-- Distrustful of generic advice
-
-Most tools fail because they:
-
-- Give generic results
-- Feel like homework
-- Don't connect to real-world validation
-- Don't give a reason to come back
-
-**Key Insight:** Clarity comes from testing, not thinking.
+The goal is to help students stop overthinking and start exploring directions in reality.
 
 ---
 
-## Target Users
+# Core Philosophy
 
-**Primary:**
+Most students do not lack information.
 
-- Students (17–22)
-- Unsure about degree or career direction
+They lack:
 
-**Not targeting:**
+* confidence in their decision
+* clarity about themselves
+* real-world exposure
+* a way to test assumptions safely
 
-- Professionals
-- Job seekers
-- People looking for placements
+Most career tools fail because they:
 
----
+* feel generic
+* feel robotic
+* force premature decisions
+* give fake certainty
+* turn self-discovery into homework
 
-## Core Product Philosophy
+ClearCareerChoice is built around a different idea:
 
-We are NOT:
+> Clarity comes from interaction, reflection, and testing — not endless thinking.
 
-- A career quiz
-- An answer engine
+The app should never feel like:
 
-We ARE:
+* school
+* productivity software
+* a psychological assessment
+* a dashboard full of metrics
 
-- A pattern detector
-- A hypothesis generator
-- A testing system
+It should feel like:
 
-We never say: "You should be X"
-
-We say: "Based on your patterns, X might fit — let's test it."
-
----
-
-## Core User Flow
-
-### Phase 1 — Conversation (Guest)
-
-1. User lands on app
-2. CTA: "Try it →"
-3. AI asks: "What's making choosing a career feel hard right now?"
-4. Conversation (3–6 messages max) — short, natural, pattern-focused
-5. Build curiosity before showing results
+> a calm guide helping the user move forward one step at a time.
 
 ---
 
-### Signup Wall
+# Product Positioning
 
-Shown when user wants the result.
+Primary positioning:
 
-Goal: "I need to see what this says about me."
+> “Don’t guess your career. Explore it before you commit.”
 
----
+Secondary positioning:
 
-### Phase 2 — Fit Insight (Critical Moment)
-
-Structure:
-
-1. Pattern Summary — "You tend to avoid X and prefer Y..."
-2. Fit Direction — "This aligns with paths like..."
-3. Conflict Insight — "This may clash with paths like..."
-4. Disclaimer — "This is a starting point, not a final answer."
+> “Stop overthinking. Start testing directions.”
 
 ---
 
-### Phase 3 — 7-Day Exploration Cycle
+# Target Users
 
-(Not called "plan" — called "test" or "exploration")
+Primary users:
 
-Each day:
+* Students aged 17–22
+* Unsure about degree or career direction
+* Afraid of wasting years on the wrong path
+* Overthinking without taking action
 
-- One small experiment (10–15 min)
-- Designed to test a specific assumption
+Not targeting:
 
-**Bad:** "Research UX design"
-
-**Good:** "Redesign the login screen of an app you use. Notice if you enjoy it or feel stuck."
-
----
-
-## Feedback Loop
-
-After each experiment:
-
-- ✅ Interesting
-- 😕 Not sure
-- ❌ Not for me
-
-This updates the Fit Insight.
-
-Progress = clarity gained, not tasks completed
+* Professionals
+* Job seekers
+* Corporate upskilling
+* Placement preparation
 
 ---
 
-## Key Risks
+# Core Product Principles
 
-1. Retention will be low by default
-2. Generic AI = instant churn
-3. Weak emotional hook = low urgency
-4. Experiments may feel like homework if poorly written
+## 1. No Fake Certainty
 
----
+The app never says:
 
-## Product Decisions
+* “You should become X”
+* “This career is perfect for you”
+* “You are a [personality type]”
 
-- No subscriptions
-- No email reminders
-- No links in experiments
-- No "you should be X"
-- Always show disclaimer on results
+Instead it says:
 
-If user shows distress → suggest talking to a real counselor.
+* “You seem drawn toward…”
+* “This direction may fit your patterns…”
+* “This tension is worth exploring…”
 
----
-
-## What Makes This Different
-
-We do NOT just suggest careers.
-
-We help users → test career assumptions in real life before committing.
+The system generates hypotheses, not conclusions.
 
 ---
 
-## Success Metrics
+## 2. Exploration Over Advice
 
-- % who complete conversation
-- % who sign up
-- % who do 2–3 experiments
-- % who feel less confused after 7 days
+The product is not designed to give answers immediately.
 
----
+It is designed to:
 
-## UI / UX Direction
+* create movement
+* reduce fear
+* generate insight through exploration
+* help users notice their reactions
 
-- Clean, calm, minimal — not clinical or robotic
-- Mobile-first — students are on their phones
-- Inspired by calm productivity tools, not dashboard-heavy SaaS
-- NOT like ChatGPT. NOT like a quiz. A guided conversation with a sharp, caring friend.
+The product succeeds when users feel:
 
-### Design System (global)
-
-- Brand color: `#7c3aed` (violet-600) — used for all primary CTAs, user bubbles, send button, logo mark
-- CSS variables: `--color-accent: #7c3aed`, `--color-accent-hover: #6d28d9` defined in `globals.css`
-- Use explicit `bg-violet-600` in components — CSS variable references in Tailwind `bg-[--var]` can silently fail
-- Background: `#FAFAF9` warm off-white
-- Typography: Geist Sans, bold headlines, muted subtext (`text-stone-500`)
-
-### Conversation UX Rules (learned from testing)
-
-- 7 user messages max — 5 felt abrupt and cut off genuine exploration
-- Session must persist across back-navigation — restore from `sessionStorage` on mount
-- AI messages: full-width white cards (authoritative, weighted)
-- User replies: compact violet bubbles right-aligned (responses, not commands)
-- Progress bar + reply counter in header creates intentional scarcity without pressure
-- AI must ask career-specific questions — NOT generic emotional reflection
-- AI must cover ALL paths the user mentions — not drill one and ignore others
-- AI must explore goals/fears/tensions, not just past enjoyment
-- First message is the highest drop-off point — always show quick-tap chips so user can start without typing
-- Chips disappear after first reply; input placeholder says "Or type your own reply…"
+> “I’m finally moving instead of endlessly thinking.”
 
 ---
 
-## Tech Stack
+## 3. Reactions Matter More Than Completion
 
-- Next.js 16 (App Router, TypeScript strict)
-- React 19
-- Tailwind CSS v4
-- Prisma 7 + Neon PostgreSQL
-- NextAuth v5 (GitHub OAuth + credentials)
-- OpenAI gpt-4o-mini
-- shadcn/ui
-- Vercel deployment
+The product does NOT measure:
 
----
+* productivity
+* streaks
+* task completion
+* performance
 
-## Data Model (Prisma)
+It measures:
 
-```prisma
-model User {
-  id            String   @id @default(cuid())
-  email         String   @unique
-  name          String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+* curiosity
+* energy
+* avoidance
+* engagement
+* confusion
+* emotional reactions
 
-  conversations Conversation[]
-  fitInsight    FitInsight?
-  experiments   TaskEntry[]
-}
-
-model Conversation {
-  id        String    @id @default(cuid())
-  userId    String?
-  sessionId String
-  messages  Message[]
-  createdAt DateTime  @default(now())
-
-  user      User?     @relation(fields: [userId], references: [id])
-}
-
-model Message {
-  id             String       @id @default(cuid())
-  conversationId String
-  role           String       // "user" | "assistant"
-  content        String
-  createdAt      DateTime     @default(now())
-
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
-}
-
-model FitInsight {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  summary   String
-  strengths String[]
-  conflicts String[]
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id])
-}
-
-model TaskEntry {
-  id          String    @id @default(cuid())
-  userId      String
-  day         Int       // 1–7
-  description String
-  feedback    String?   // "felt_good" | "neutral" | "drained"
-  completedAt DateTime?
-  createdAt   DateTime  @default(now())
-
-  user        User      @relation(fields: [userId], references: [id])
-}
-```
+Behavioral signals matter more than finishing activities.
 
 ---
 
-## Final Note
+## 4. The Insight Is Evolving
 
-Users don't need more advice. They need a way to stop guessing.
+The user’s insight is not permanent.
 
-This product only works if:
+It updates over time based on:
 
-- The insight feels real
-- The experiments feel meaningful
-- The user feels understood
+* conversation patterns
+* exploration reflections
+* skipped explorations
+* emotional responses
 
-If those fail, the product fails.
+Changing direction is not failure.
+It means the system is learning.
+
+---
+
+# Product Structure
+
+The product has four major stages.
+
+---
+
+# Stage 1 — AI Conversation
+
+Route:
+`/chat`
+
+The user starts with a short guided conversation.
+
+The conversation is:
+
+* natural
+* short
+* emotionally aware
+* focused on patterns and tensions
+
+The AI explores:
+
+* interests
+* fears
+* motivations
+* uncertainty
+* internal conflicts
+* environmental preferences
+* confidence barriers
+
+The goal is NOT career matching.
+
+The goal is to generate:
+
+> an initial hypothesis worth exploring.
+
+Conversation length:
+
+* approximately 5–12 messages
+* mobile-first
+* low friction
+
+The AI should feel:
+
+* thoughtful
+* calm
+* human
+* grounded
+
+NOT:
+
+* robotic
+* over-enthusiastic
+* overly analytical
+
+---
+
+# Stage 2 — Initial Insight
+
+Route:
+`/result`
+
+After signup/login, the user receives:
+
+* a short pattern summary
+* possible directions worth exploring
+* tensions worth noticing
+
+This page is intentionally lightweight.
+
+It should create:
+
+* curiosity
+* emotional resonance
+* trust
+
+NOT:
+
+* certainty
+* diagnosis
+* career labeling
+
+The insight is framed as:
+
+> a starting point for exploration.
+
+---
+
+# Stage 3 — Guided Exploration
+
+Core product loop.
+
+The system generates ONE exploration at a time.
+
+Explorations are:
+
+* lightweight
+* beginner-friendly
+* realistic
+* emotionally focused
+* under 10–15 minutes
+
+The goal is NOT skill-building.
+
+The goal is observing:
+
+* curiosity
+* energy
+* engagement
+* resistance
+* intimidation
+* focus
+
+Examples:
+
+* observing workflows
+* watching real-world environments
+* trying tiny interactions
+* reflecting on reactions
+* noticing what feels energizing or draining
+
+Explorations should never feel:
+
+* overwhelming
+* academic
+* like assignments
+* like productivity tasks
+
+The user can:
+
+* complete
+* skip
+* reflect
+
+All responses become behavioral signals.
+
+---
+
+# Stage 4 — Evolving Insight
+
+As reflections accumulate, the insight evolves.
+
+The system gradually identifies:
+
+* stronger directions
+* weaker fits
+* recurring tensions
+* confidence barriers
+* engagement patterns
+
+The product should help users:
+
+* reduce uncertainty
+* gain momentum
+* understand themselves more clearly
+
+NOT:
+
+* instantly “find the perfect career”
+
+---
+
+# UX Philosophy
+
+The product should feel:
+
+* calm
+* focused
+* lightweight
+* emotionally safe
+* mobile-native
+
+Avoid:
+
+* dashboards
+* analytics
+* charts
+* scores
+* percentages
+* gamification
+* streaks
+
+The interface should guide attention toward:
+
+> “What should I explore next?”
+
+not:
+
+> “How much progress have I completed?”
+
+---
+
+# Home Screen Philosophy
+
+The “dashboard” is not a productivity dashboard.
+
+It is a calm home screen.
+
+Purpose:
+
+* continue exploration
+* revisit reflections
+* view evolving insight
+* maintain continuity
+
+The primary action is always:
+
+> Continue Exploring
+
+---
+
+# Exploration Philosophy
+
+Explorations are not “tasks.”
+
+They are guided experiences designed to test assumptions gently.
+
+Good explorations:
+
+* reduce pressure
+* encourage observation
+* create emotional reactions
+* feel approachable to beginners
+
+Bad explorations:
+
+* require expertise
+* feel like homework
+* overwhelm the user
+* assume prior knowledge
+
+The system prioritizes:
+
+* curiosity over performance
+* reflection over completion
+* movement over certainty
+
+---
+
+# Reflection Philosophy
+
+After each exploration, users reflect using guided options.
+
+Examples:
+
+* “I became curious quickly”
+* “I felt intimidated”
+* “I lost interest fast”
+* “I wanted to keep exploring”
+* “I preferred more structure”
+
+Reflections should:
+
+* feel lightweight
+* generate strong behavioral signals
+* avoid long-form journaling initially
+
+---
+
+# Core Emotional Goal
+
+The product succeeds if users feel:
+
+> “I’m no longer frozen.”
+
+Not:
+
+> “The AI solved my future.”
+
+---
+
+# Success Metrics
+
+Primary metrics:
+
+* conversation completion rate
+* signup conversion rate
+* exploration continuation rate
+* reflection submission rate
+* returning users
+* users reporting reduced confusion
+
+Secondary metrics:
+
+* exploration skips
+* insight evolution over time
+* repeated engagement with certain directions
+
+---
+
+# Technical Stack
+
+* Next.js 16 (App Router, TypeScript strict)
+* React 19
+* Tailwind CSS v4
+* Prisma 7 + Neon PostgreSQL
+* NextAuth v5
+* OpenAI GPT-4.1 Mini
+* shadcn/ui
+* Vercel deployment
+
+---
+
+# Design System
+
+Brand color:
+`#7c3aed` (violet-600)
+
+Background:
+`#FAFAF9`
+
+Style:
+
+* warm
+* minimal
+* soft
+* spacious
+* mobile-first
+
+Inspired by:
+
+* calm productivity apps
+* reflective journaling apps
+* guided experiences
+
+NOT:
+
+* enterprise SaaS
+* analytics dashboards
+* ChatGPT clones
+
+---
+
+# Important Constraints
+
+The product should NEVER:
+
+* guarantee career outcomes
+* frame insights as objective truth
+* shame users for uncertainty
+* pressure users into completion
+* feel manipulative
+* overload users cognitively
+
+The product should ALWAYS:
+
+* reduce friction
+* encourage exploration
+* normalize uncertainty
+* maintain emotional trust
+* help users move forward gradually
