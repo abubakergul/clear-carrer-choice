@@ -55,7 +55,7 @@ Body: List the `areas` as clean cards or pills
 
 **Section 4 — CTA to Dashboard**
 "Ready to explore further?"
-Button: "Go to my dashboard" → `/dashboard`
+Button: "Start Exploring" → `/dashboard`
 
 ## What NOT to Include
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import SignupWall from "./SignupWall";
+import { saveMessages } from "@/actions/conversation";
 
 type Message = { role: "user" | "assistant"; content: string };
 type WallVariant = "pattern" | "continue" | "dead";
@@ -32,6 +33,7 @@ const OPENING_BY_STAGE: Record<EducationStage, string> = {
   graduated:  "What's making it hard to figure out your next career move?",
 };
 
+// These must match exactly what the conversation prompt instructs the AI to output
 const PATTERN_TRIGGER = "I'm starting to see a pattern.";
 const CONTINUE_TRIGGER = "We've started building a picture.";
 const SAFETY_MAX = 12;
@@ -92,6 +94,16 @@ function getChipsForMessage(text: string): string[] | null {
     return ["A lot", "A little", "Not at all"];
   }
 
+  if (/\b(torn between|confused between|part of me|on one hand|but also|can't decide|stuck between)\b/.test(lower)) {
+    return [
+      "Creativity vs stability",
+      "Money vs meaning",
+      "Freedom vs security",
+      "Interest vs confidence",
+      "Passion vs family expectations",
+    ];
+  }
+
   return null;
 }
 
@@ -149,20 +161,22 @@ export default function ChatInterface() {
   const endRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const sessionIdRef = useRef("");
+  const conversationIdRef = useRef<string | null>(null);
   const garbageStreakRef = useRef(0);
 
   useEffect(() => {
     const navEntry = performance?.getEntriesByType?.("navigation")?.[0] as PerformanceNavigationTiming | undefined;
     const isReturning = navEntry?.type === "back_forward" || navEntry?.type === "reload";
 
-    let id = sessionStorage.getItem("ccc_session");
+    let id = sessionStorage.getItem("ccc_session_id");
 
     if (!isReturning || !id) {
       id = crypto.randomUUID();
-      sessionStorage.setItem("ccc_session", id);
+      sessionStorage.setItem("ccc_session_id", id);
       sessionStorage.removeItem("ccc_messages");
       sessionStorage.removeItem("ccc_wall");
       sessionStorage.removeItem("ccc_stage");
+      sessionStorage.removeItem("ccc_conv_id");
     } else {
       const savedStage = sessionStorage.getItem("ccc_stage") as EducationStage | null;
       if (savedStage) setEducationStage(savedStage);
@@ -173,6 +187,9 @@ export default function ChatInterface() {
       }
       const savedWall = sessionStorage.getItem("ccc_wall");
       if (savedWall) setWallVariant(savedWall as WallVariant);
+
+      const savedConvId = sessionStorage.getItem("ccc_conv_id");
+      if (savedConvId) conversationIdRef.current = savedConvId;
     }
 
     sessionIdRef.current = id;
@@ -204,6 +221,27 @@ export default function ChatInterface() {
     if (normalized.includes(PATTERN_TRIGGER)) return "pattern";
     if (normalized.includes(CONTINUE_TRIGGER)) return "continue";
     return null;
+  }
+
+  async function ensureConversationCreated(stage: EducationStage) {
+    if (conversationIdRef.current) return;
+    try {
+      const res = await fetch("/api/chat/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: sessionIdRef.current,
+          educationStage: stage,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        conversationIdRef.current = data.conversationId;
+        sessionStorage.setItem("ccc_conv_id", data.conversationId);
+      }
+    } catch {
+      // Silently fail — conversation continues without DB persistence
+    }
   }
 
   async function send(overrideText?: string, isChip = false) {
@@ -252,6 +290,11 @@ export default function ChatInterface() {
       return;
     }
 
+    // Create conversation record in DB on first message
+    if (educationStage) {
+      await ensureConversationCreated(educationStage);
+    }
+
     setIsStreaming(true);
     setMessages((p) => [...p, { role: "assistant", content: "" }]);
 
@@ -282,6 +325,11 @@ export default function ChatInterface() {
           u[u.length - 1] = { role: "assistant", content: fullText };
           return u;
         });
+      }
+
+      // Persist the exchange to the database (fire-and-forget)
+      if (conversationIdRef.current && fullText) {
+        saveMessages(conversationIdRef.current, text, fullText).catch(() => {});
       }
 
       const variant = detectClosing(fullText);

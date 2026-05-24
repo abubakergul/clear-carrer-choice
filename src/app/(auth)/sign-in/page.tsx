@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { signIn, signOut } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { credentialsSignIn } from "@/actions/auth";
 import { Toast } from "@/components/ui/Toast";
@@ -36,10 +36,7 @@ function SignInContent() {
     });
   }
 
-  async function handleGoogleSignIn() {
-    // Sign out any stale session first so NextAuth doesn't see a conflicting
-    // active user when processing the Google OAuth callback.
-    await signOut({ redirect: false });
+  function handleGoogleSignIn() {
     signIn("google", { callbackUrl: "/dashboard" });
   }
 
