@@ -1,42 +1,16 @@
-# Current Feature: Guest Session Persistence + Initial Insight Generation
+# Current Feature
 
 ## Status
 
-In Progress
+<!-- Not Started | In Progress | Completed -->
 
 ## Goals
 
-- Persist every guest conversation to the DB in real time (user + assistant message pairs after each exchange)
-- Create a `Conversation` record on the first user message, keyed by `ccc_session_id` in sessionStorage
-- After successful signup, login, or OAuth: claim the conversation (set `userId`), generate a `FitInsight`, generate the first `Exploration`, redirect to `/result`
-- `/result` page shows summary, directions, tensions, and first exploration CTA
-- Session rules: same browser session restores; new session starts fresh; logged-in user with existing insight is redirected to `/dashboard`; logged-in user without insight can access `/chat`
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Session storage key: `ccc_session_id` (was `ccc_session` — fixed as part of this feature)
-- Bug fix included: `PATTERN_TRIGGER` and `CONTINUE_TRIGGER` in `ChatInterface.tsx` did not match the strings the conversation prompt instructs the AI to output — the signup wall would never trigger. Fixed to match the actual prompt.
-- Post-auth flow uses a `/claim` page (client component) that reads `ccc_session_id` from sessionStorage, calls the `claimAndGenerate` server action, then redirects to `/result`
-- `claimAndGenerate` is a single combined server action: claim → load messages → generate FitInsight → generate first Exploration
-- AI calls use the OpenAI Responses API (`openai.responses.create`) consistent with the existing chat route
-- `/home` is referenced in the spec as the destination for users with an existing insight, but that page doesn't exist yet — `/dashboard` is used as the fallback until feature 16 is built
-- Prompts stored in `src/lib/prompts/insight.ts` and `src/lib/prompts/first-exploration.ts` per architecture convention
-
-## Files Created
-
-- `src/lib/prompts/insight.ts`
-- `src/lib/prompts/first-exploration.ts`
-- `src/app/api/chat/session/route.ts`
-- `src/actions/conversation.ts`
-- `src/app/claim/page.tsx`
-- `src/app/result/page.tsx`
-
-## Files Modified
-
-- `src/components/chat/ChatInterface.tsx`
-- `src/actions/auth.ts`
-- `src/app/(auth)/sign-in/page.tsx`
-- `src/app/chat/page.tsx`
+<!-- Additional context, constraints, or details -->
 
 ## History
 
@@ -54,6 +28,8 @@ In Progress
 
 - **Auth Credentials - Email/Password Provider** — Added `password String?` to `User` model (migration `20260510020057_add_password_to_user`). Credentials placeholder (`authorize: () => null`) added to `src/auth.config.ts` for edge compatibility. `src/auth.ts` overrides with full bcrypt validation, filtering the placeholder from the spread to avoid duplicate provider. `src/proxy.ts` fixed to use `NextAuth(authConfig)` directly (not `@/auth`) to prevent `bcryptjs` from loading on the Edge runtime. `POST /api/auth/register` validates inputs, checks for existing user, hashes with bcrypt (cost 12), creates user. Files: `src/auth.config.ts`, `src/auth.ts`, `src/proxy.ts`, `src/app/api/auth/register/route.ts`, `prisma/schema.prisma`.
 
-- **Auth UI - Sign In, Register & Sign Out** — Custom `/sign-in` page (email/password + Google, controlled inputs, `signOut`-first fix for `OAuthAccountNotLinked`). Custom `/register` page with client-side validation and `confirmPassword` in body. `(auth)` route group with server-side session guard (redirects to `/dashboard` if already signed in). Dashboard layout with fixed sidebar: branding, nav slot, user section at bottom. `UserMenu`: opens on hover with 120 ms close delay, chevron indicator, red "Sign out" with icon, "View profile" link. `UserAvatar`: Google image or initials fallback (violet background). `Toast`: auto-dismiss (3 s), success/error/info variants. `auth.config.ts` updated with `pages.signIn` and `allowDangerousEmailAccountLinking`. `proxy.ts` redirect updated to `/sign-in`. `SignupWall` links fixed to `/register` and `/sign-in`. Landing page (`/`) and `/chat` redirect logged-in users to `/dashboard`. `next.config.ts` adds `lh3.googleusercontent.com` for Google avatars. Files: `src/actions/auth.ts`, `src/app/(auth)/`, `src/app/dashboard/layout.tsx`, `src/components/dashboard/UserMenu.tsx`, `src/components/dashboard/WelcomeToast.tsx`, `src/components/ui/Toast.tsx`, `src/components/ui/UserAvatar.tsx`, `src/auth.config.ts`, `src/proxy.ts`, `src/components/chat/SignupWall.tsx`, `src/app/page.tsx`, `src/app/chat/page.tsx`, `next.config.ts`.
+- **Auth UI - Sign In, Register & Sign Out** — Custom `/sign-in` page (email/password + Google, controlled inputs). Custom `/register` page with client-side validation and `confirmPassword` in body. `(auth)` route group with server-side session guard (redirects to `/dashboard` if already signed in). Dashboard layout with fixed sidebar: branding, nav slot, user section at bottom. `UserMenu`: opens on hover with 120 ms close delay, chevron indicator, red "Sign out" with icon, "View profile" link. `UserAvatar`: Google image or initials fallback (violet background). `Toast`: auto-dismiss (3 s), success/error/info variants. `auth.config.ts` updated with `pages.signIn` and `allowDangerousEmailAccountLinking`. `proxy.ts` redirect updated to `/sign-in`. `SignupWall` links fixed to `/register` and `/sign-in`. Landing page (`/`) and `/chat` redirect logged-in users to `/dashboard`. `next.config.ts` adds `lh3.googleusercontent.com` for Google avatars. Files: `src/actions/auth.ts`, `src/app/(auth)/`, `src/app/dashboard/layout.tsx`, `src/components/dashboard/UserMenu.tsx`, `src/components/dashboard/WelcomeToast.tsx`, `src/components/ui/Toast.tsx`, `src/components/ui/UserAvatar.tsx`, `src/auth.config.ts`, `src/proxy.ts`, `src/components/chat/SignupWall.tsx`, `src/app/page.tsx`, `src/app/chat/page.tsx`, `next.config.ts`.
 
 - **Data Architecture** — Prisma schema migrated to new data model. `TaskEntry` removed; replaced by `Exploration` (title, prompt, status `active|completed|skipped|expired`, optional `aiInterpretation`, expiry/completion/skip timestamps) and `Reflection` (structured `selectedSignals String[]`). `FitInsight` updated: `strengths`→`directions`, `conflicts`→`tensions`, added `version Int @default(1)`. `Conversation` gains `educationStage String?`. `User` relation updated from `experiments` to `explorations`. Schema pushed to Neon dev via `prisma db push --accept-data-loss`. Prisma client regenerated. Seed updated with 4 demo explorations (3 completed with reflections, 1 active) and revised `FitInsight` with directions/tensions. Note: no migration file created — run `npx prisma migrate dev --name data_architecture` from an interactive terminal before deploying to production. Files: `prisma/schema.prisma`, `prisma/seed.ts`, `context/Data Architecture.md`.
+
+- **Guest Session Persistence + Initial Insight Generation** — Every guest conversation is persisted to the DB in real time. `POST /api/chat/session` creates a `Conversation` record on first user message (keyed by `ccc_session_id` in sessionStorage). `saveMessages()` server action persists user+assistant pairs after each stream. After auth, `claimAndGenerate()` claims the conversation (sets `userId`), generates a `FitInsight` and first `Exploration` via OpenAI, then redirects to `/result`. Google OAuth lands on `/dashboard` where `ClaimRedirector` bounces to `/claim`; credentials sign-in goes directly to `/claim`. `/result` shows summary, directions, tensions, and first exploration CTA. Chat page now allows logged-in users without insight to access `/chat`. Bug fixed: `PATTERN_TRIGGER`/`CONTINUE_TRIGGER` did not match the actual AI prompt output — signup wall would never trigger. Removed unnecessary `signOut`-before-`signIn` from Google button (superseded by `allowDangerousEmailAccountLinking`). Files: `src/actions/conversation.ts`, `src/app/api/chat/session/route.ts`, `src/app/claim/page.tsx`, `src/app/result/page.tsx`, `src/components/dashboard/ClaimRedirector.tsx`, `src/lib/prompts/insight.ts`, `src/lib/prompts/first-exploration.ts`, `src/components/chat/ChatInterface.tsx`, `src/app/chat/page.tsx`, `src/app/dashboard/layout.tsx`, `src/actions/auth.ts`, `src/app/(auth)/sign-in/page.tsx`.
