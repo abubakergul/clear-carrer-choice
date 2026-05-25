@@ -17,10 +17,13 @@ export default function ClaimPage() {
       sessionStorage.removeItem("ccc_session_id");
       sessionStorage.removeItem("ccc_conv_id");
       router.replace("/result");
-    } else if ("fallback" in result && result.fallback) {
-      sessionStorage.removeItem("ccc_session_id");
-      sessionStorage.removeItem("ccc_conv_id");
-      router.replace("/dashboard");
+    } else if ("to" in result) {
+      // Only clear session ID when redirecting to /result (done) or truly giving up
+      if (result.to === "/result" || result.to === "/dashboard") {
+        sessionStorage.removeItem("ccc_session_id");
+        sessionStorage.removeItem("ccc_conv_id");
+      }
+      router.replace(result.to);
     } else {
       setFailed(true);
     }

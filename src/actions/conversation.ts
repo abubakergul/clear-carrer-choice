@@ -21,44 +21,46 @@ export async function saveMessages(
 
 type ClaimResult =
   | { ok: true }
-  | { ok: false; fallback: true }
-  | { ok: false; fallback?: false; error: string };
+  | { ok: false; to: string }
+  | { ok: false; error: string };
 
 export async function claimAndGenerate(
   sessionId: string | null
 ): Promise<ClaimResult> {
   const session = await auth();
-  if (!session?.user?.id) return { ok: false, fallback: true };
+  if (!session?.user?.id) return { ok: false, to: "/dashboard" };
 
   const userId = session.user.id;
 
-  // Already has insight — nothing to generate
+  // Already has insight — send straight to result page
   const existingInsight = await prisma.fitInsight.findUnique({
     where: { userId },
     select: { id: true },
   });
-  if (existingInsight) return { ok: false, fallback: true };
+  if (existingInsight) return { ok: false, to: "/result" };
 
-  if (!sessionId) return { ok: false, fallback: true };
+  if (!sessionId) return { ok: false, to: "/dashboard" };
 
-  // Claim latest unclaimed conversation for this session
+  // Find unclaimed conversation OR one already claimed by this user (retry after failed insight)
   const conv = await prisma.conversation.findFirst({
-    where: { sessionId, userId: null },
+    where: { sessionId, OR: [{ userId: null }, { userId }] },
     orderBy: { createdAt: "desc" },
   });
-  if (!conv) return { ok: false, fallback: true };
+  if (!conv) return { ok: false, to: "/dashboard" };
 
-  await prisma.conversation.update({
-    where: { id: conv.id },
-    data: { userId },
-  });
+  if (!conv.userId) {
+    await prisma.conversation.update({
+      where: { id: conv.id },
+      data: { userId },
+    });
+  }
 
   // Load persisted messages
   const messages = await prisma.message.findMany({
     where: { conversationId: conv.id },
     orderBy: { createdAt: "asc" },
   });
-  if (messages.length === 0) return { ok: false, fallback: true };
+  if (messages.length === 0) return { ok: false, to: "/dashboard" };
 
   const formatted = messages
     .map((m) => `${m.role}: ${m.content}`)
@@ -68,7 +70,7 @@ export async function claimAndGenerate(
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   // Generate FitInsight
-  let insightData: { summary: string; directions: string[]; tensions: string[] };
+  let insightData: { summary: string; directions: string[]; directionsWhy: string[]; tensions: string[] };
   try {
     const insightRes = await openai.responses.create({
       model: "gpt-4.1-mini",
@@ -80,14 +82,19 @@ export async function claimAndGenerate(
     return { ok: false, error: "insight_generation_failed" };
   }
 
-  await prisma.fitInsight.create({
-    data: {
-      userId,
-      summary: insightData.summary,
-      directions: insightData.directions,
-      tensions: insightData.tensions,
-    },
-  });
+  try {
+    await prisma.fitInsight.create({
+      data: {
+        userId,
+        summary: insightData.summary,
+        directions: insightData.directions,
+        directionsWhy: insightData.directionsWhy ?? [],
+        tensions: insightData.tensions,
+      },
+    });
+  } catch {
+    return { ok: false, error: "insight_generation_failed" };
+  }
 
   // Generate first Exploration
   const explorationPrompt = FIRST_EXPLORATION_PROMPT
