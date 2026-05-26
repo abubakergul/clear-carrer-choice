@@ -71,6 +71,10 @@ Do NOT create backlog systems.
 
 ---
 
+# UI/UX
+
+The buttons and where it should it display was not explain use your own intelligence to do it.
+
 # Exploration Structure
 
 Each exploration contains:

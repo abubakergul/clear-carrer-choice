@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
-import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaClient, ExplorationStatus, ExplorationType, ExplorationIntensity, ReflectionSource } from "../src/generated/prisma/client";
 import { PrismaNeon } from "@prisma/adapter-neon";
 
 const adapter = new PrismaNeon({ connectionString: process.env.DATABASE_URL! });
@@ -117,34 +117,77 @@ const EXPLORATIONS = [
   {
     title: "Spend 30 minutes reading about a field you've dismissed",
     prompt: "Pick a career area you've always assumed wasn't for you. Read about what someone actually does day-to-day. Notice what comes up — curiosity, boredom, resistance, or something unexpected.",
-    status: "completed",
+    status: ExplorationStatus.COMPLETED,
+    type: ExplorationType.OBSERVE,
+    intensity: ExplorationIntensity.VERY_LIGHT,
+    generationContext: {
+      basedOnSignals: ["resistance", "avoidance"],
+      basedOnTensions: ["stability vs creativity"],
+      reason: "User dismissed certain paths reflexively — this surfaces whether the resistance is real or assumed.",
+    },
     daysAgo: 15,
-    signals: ["curiosity", "surprise", "mild resistance"],
-    aiInterpretation: "You engaged with the material longer than the task required, which suggests the field triggered genuine interest despite your assumptions. The resistance may reflect identity conflict rather than actual disinterest.",
+    reflection: {
+      source: ReflectionSource.COMPLETION,
+      selectedSignals: ["curiosity", "surprise", "mild resistance"],
+      emotionalState: "reflective",
+      curiosityLevel: 4,
+      intimidationLevel: 2,
+    },
   },
   {
     title: "Teach something you know to a friend or in writing",
     prompt: "Explain a skill or concept you're comfortable with to someone unfamiliar with it. Notice whether explaining it energizes or drains you.",
-    status: "completed",
+    status: ExplorationStatus.COMPLETED,
+    type: ExplorationType.INTERACT,
+    intensity: ExplorationIntensity.LIGHT,
+    generationContext: {
+      basedOnSignals: ["energy", "engagement"],
+      basedOnTensions: ["solo work vs people-facing roles"],
+      reason: "Testing whether knowledge-sharing creates energy or feels like performance pressure.",
+    },
     daysAgo: 10,
-    signals: ["energy", "engagement", "flow"],
-    aiInterpretation: "High energy while teaching suggests you derive meaning from sharing knowledge, not just from doing the work. This pattern points toward roles with a mentorship or communication component.",
+    reflection: {
+      source: ReflectionSource.COMPLETION,
+      selectedSignals: ["energy", "engagement", "flow"],
+      emotionalState: "energized",
+      energyLevel: 5,
+      curiosityLevel: 3,
+    },
   },
   {
     title: "Do one hour of solo, unstructured creative work",
     prompt: "Set aside an hour with no goal except to make or explore something freely — writing, sketching, building, designing. No output required. Notice how your attention moves.",
-    status: "completed",
+    status: ExplorationStatus.COMPLETED,
+    type: ExplorationType.SIMULATE,
+    intensity: ExplorationIntensity.LIGHT,
+    generationContext: {
+      basedOnSignals: ["curiosity", "desire for creativity"],
+      basedOnTensions: ["desire for structure vs open-ended work"],
+      reason: "Observing whether ambiguity creates anxiety or freedom.",
+    },
     daysAgo: 5,
-    signals: ["curiosity", "excitement", "desire for structure"],
-    aiInterpretation: "The pull toward structure mid-session is informative — you engage with open-ended exploration but self-impose constraints to stay focused. This suggests you need creative latitude within a defined container, not total ambiguity.",
+    reflection: {
+      source: ReflectionSource.COMPLETION,
+      selectedSignals: ["curiosity", "excitement", "desire for structure"],
+      emotionalState: "mixed",
+      energyLevel: 3,
+      curiosityLevel: 4,
+      intimidationLevel: 2,
+    },
   },
   {
     title: "Shadow or interview someone in a role you're curious about",
     prompt: "Reach out to someone whose work seems interesting and ask for 20 minutes to learn about their day. If that's not possible, find a detailed interview or video online. Notice your reaction as they describe their reality.",
-    status: "active",
+    status: ExplorationStatus.ACTIVE,
+    type: ExplorationType.OBSERVE,
+    intensity: ExplorationIntensity.LIGHT,
+    generationContext: {
+      basedOnSignals: ["curiosity", "engagement"],
+      basedOnTensions: ["uncertainty about fit"],
+      reason: "Moving from passive observation to direct exposure of what the work actually feels like.",
+    },
     daysAgo: 1,
-    signals: [],
-    aiInterpretation: null,
+    reflection: null,
   },
 ];
 
@@ -199,12 +242,12 @@ async function main() {
       summary:
         "This user performs best in autonomous, low-interruption environments with extended blocks of focused time. Frequent context switching, meeting-heavy schedules, and reactive communication patterns consistently reduce energy and engagement. They show strong capacity for independent problem-solving and technical depth, but require visible impact and clear ownership to sustain motivation over time.",
       directions: [
-        "Independent, deep-focus work with clear ownership",
-        "Environments with visible output and user-facing impact",
-        "Roles that reward systems thinking and technical depth",
-        "Async-first teams with autonomy over structure",
-        "Work that involves teaching, mentoring, or knowledge transfer",
-        "Creative work with defined constraints rather than total ambiguity",
+        "Independent deep-focus work",
+        "Visible user-facing impact",
+        "Systems thinking and technical depth",
+        "Async-first autonomous teams",
+        "Teaching and knowledge transfer",
+        "Creative work within constraints",
       ],
       tensions: [
         "Context switching fatigue in reactive, meeting-heavy environments",
@@ -220,10 +263,11 @@ async function main() {
 
   for (const exp of EXPLORATIONS) {
     const createdAt = daysAgo(exp.daysAgo, rand(9, 14), rand(0, 45));
-    const isCompleted = exp.status === "completed";
+    const isCompleted = exp.status === ExplorationStatus.COMPLETED;
     const completedAt = isCompleted
       ? new Date(createdAt.getTime() + rand(30, 90) * 60 * 1000)
       : null;
+    const expiresAt = new Date(createdAt.getTime() + 48 * 60 * 60 * 1000);
 
     const exploration = await prisma.exploration.create({
       data: {
@@ -232,18 +276,25 @@ async function main() {
         title: exp.title,
         prompt: exp.prompt,
         status: exp.status,
-        aiInterpretation: exp.aiInterpretation ?? null,
+        type: exp.type,
+        intensity: exp.intensity,
+        generationContext: exp.generationContext,
         createdAt,
         completedAt,
-        expiresAt: new Date(createdAt.getTime() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt,
       },
     });
 
-    if (isCompleted && exp.signals.length > 0) {
+    if (isCompleted && exp.reflection) {
       await prisma.reflection.create({
         data: {
           explorationId: exploration.id,
-          selectedSignals: exp.signals,
+          source: exp.reflection.source,
+          selectedSignals: exp.reflection.selectedSignals,
+          emotionalState: exp.reflection.emotionalState,
+          energyLevel: exp.reflection.energyLevel ?? null,
+          curiosityLevel: exp.reflection.curiosityLevel ?? null,
+          intimidationLevel: exp.reflection.intimidationLevel ?? null,
           createdAt: completedAt!,
         },
       });

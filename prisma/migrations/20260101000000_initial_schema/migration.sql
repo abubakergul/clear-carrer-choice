@@ -1,3 +1,18 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
+-- CreateEnum
+CREATE TYPE "ExplorationStatus" AS ENUM ('ACTIVE', 'COMPLETED', 'SKIPPED', 'EXPIRED');
+
+-- CreateEnum
+CREATE TYPE "ExplorationType" AS ENUM ('OBSERVE', 'COMPARE', 'INTERACT', 'SIMULATE', 'REFLECT');
+
+-- CreateEnum
+CREATE TYPE "ExplorationIntensity" AS ENUM ('VERY_LIGHT', 'LIGHT', 'MEDIUM');
+
+-- CreateEnum
+CREATE TYPE "ReflectionSource" AS ENUM ('COMPLETION', 'SKIP', 'EXPIRATION');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" TEXT NOT NULL,
@@ -5,6 +20,7 @@ CREATE TABLE "User" (
     "name" TEXT,
     "image" TEXT,
     "emailVerified" TIMESTAMP(3),
+    "password" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -16,6 +32,7 @@ CREATE TABLE "Conversation" (
     "id" TEXT NOT NULL,
     "userId" TEXT,
     "sessionId" TEXT NOT NULL,
+    "educationStage" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Conversation_pkey" PRIMARY KEY ("id")
@@ -37,8 +54,9 @@ CREATE TABLE "FitInsight" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "summary" TEXT NOT NULL,
-    "strengths" TEXT[],
-    "conflicts" TEXT[],
+    "directions" TEXT[],
+    "tensions" TEXT[],
+    "version" INTEGER NOT NULL DEFAULT 1,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -46,16 +64,40 @@ CREATE TABLE "FitInsight" (
 );
 
 -- CreateTable
-CREATE TABLE "TaskEntry" (
+CREATE TABLE "Exploration" (
     "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "day" INTEGER NOT NULL,
-    "description" TEXT NOT NULL,
-    "feedback" TEXT,
+    "fitInsightId" TEXT,
+    "title" TEXT NOT NULL,
+    "prompt" TEXT NOT NULL,
+    "status" "ExplorationStatus" NOT NULL,
+    "type" "ExplorationType",
+    "intensity" "ExplorationIntensity",
+    "generationContext" JSONB,
+    "skipReason" TEXT,
+    "systemObservations" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMP(3),
     "completedAt" TIMESTAMP(3),
+    "skippedAt" TIMESTAMP(3),
+
+    CONSTRAINT "Exploration_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Reflection" (
+    "id" TEXT NOT NULL,
+    "explorationId" TEXT NOT NULL,
+    "source" "ReflectionSource",
+    "emotionalState" TEXT,
+    "energyLevel" INTEGER,
+    "curiosityLevel" INTEGER,
+    "intimidationLevel" INTEGER,
+    "selectedSignals" TEXT[],
+    "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "TaskEntry_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Reflection_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -109,7 +151,10 @@ CREATE INDEX "Message_conversationId_idx" ON "Message"("conversationId");
 CREATE UNIQUE INDEX "FitInsight_userId_key" ON "FitInsight"("userId");
 
 -- CreateIndex
-CREATE INDEX "TaskEntry_userId_idx" ON "TaskEntry"("userId");
+CREATE INDEX "Exploration_userId_status_idx" ON "Exploration"("userId", "status");
+
+-- CreateIndex
+CREATE INDEX "Reflection_explorationId_idx" ON "Reflection"("explorationId");
 
 -- CreateIndex
 CREATE INDEX "Account_userId_idx" ON "Account"("userId");
@@ -139,7 +184,10 @@ ALTER TABLE "Message" ADD CONSTRAINT "Message_conversationId_fkey" FOREIGN KEY (
 ALTER TABLE "FitInsight" ADD CONSTRAINT "FitInsight_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TaskEntry" ADD CONSTRAINT "TaskEntry_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Exploration" ADD CONSTRAINT "Exploration_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Reflection" ADD CONSTRAINT "Reflection_explorationId_fkey" FOREIGN KEY ("explorationId") REFERENCES "Exploration"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
