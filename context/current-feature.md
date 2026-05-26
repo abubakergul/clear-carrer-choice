@@ -1,34 +1,16 @@
-# Current Feature: Exploration System + Data Architecture Revision
+# Current Feature
 
 ## Status
 
-In Progress
+<!-- Not Started | In Progress | Completed -->
 
 ## Goals
 
-- Migrate Prisma schema to add `ExplorationStatus`, `ExplorationType`, `ExplorationIntensity`, and `ReflectionSource` enums
-- Update `Exploration` model with `type`, `intensity`, `generationContext` (Json), `skipReason`, `systemObservations` fields
-- Update `Reflection` model with `source`, `emotionalState`, `energyLevel`, `curiosityLevel`, `intimidationLevel` fields
-- Remove `directionsWhy` and `aiInterpretation` from current schema; align `FitInsight` to spec (directions, tensions, summary, version — no extras)
-- Enforce one-active-exploration rule in backend (query guard before creating a new one)
-- Update first-exploration generation (in `claimAndGenerate`) to populate `type`, `intensity`, and `generationContext`
-- Build `/explore` (or dashboard exploration card): shows active exploration title, prompt, estimated duration, "Why this?" context, and Start / Skip / Already know this actions
-- Build reflection UX: signal tap-selection, optional short notes, emotional state capture — triggered on completion, skip, or expiration
-- Wire reflection submission to generate the next exploration via AI (using signals + tensions + prior reflections)
-- Implement expiration logic: mark explorations `EXPIRED` after 48–72 hours, trigger next generation without guilt messaging
-- Update seed data to use new schema shape (enums, new fields)
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Only ONE `ACTIVE` exploration allowed per user at a time — enforce in both business logic and consider a DB partial unique index
-- Skipping is valuable behavioral data: always collect a lightweight reason (pre-selected options, not free text)
-- The system observes *reactions* (curiosity, resistance, excitement, boredom, intimidation) — never performance or competence
-- Early explorations must be `VERY_LIGHT` or `LIGHT` intensity; avoid `MEDIUM` until patterns are established
-- `generationContext` (Json) stores explainability data: which signals/tensions drove generation and a short reason
-- Reflections use taps/selections as primary input; free text (`notes`) is optional only
-- Expired explorations are NOT failures — UX must avoid guilt, backlog, or streak-breaking language
-- No scores, rankings, personality labels, or completion metrics anywhere in the system
-- `directionsWhy String[]` was added to FitInsight in the Result Page Redesign — spec does not include it; remove during this migration
+<!-- Additional context, constraints, or details -->
 
 ## History
 
@@ -53,3 +35,5 @@ In Progress
 - **Guest Session Persistence + Initial Insight Generation** — Every guest conversation is persisted to the DB in real time. `POST /api/chat/session` creates a `Conversation` record on first user message (keyed by `ccc_session_id` in sessionStorage). `saveMessages()` server action persists user+assistant pairs after each stream. After auth, `claimAndGenerate()` claims the conversation (sets `userId`), generates a `FitInsight` and first `Exploration` via OpenAI, then redirects to `/result`. Google OAuth lands on `/dashboard` where `ClaimRedirector` bounces to `/claim`; credentials sign-in goes directly to `/claim`. `/result` shows summary, directions, tensions, and first exploration CTA. Chat page now allows logged-in users without insight to access `/chat`. Bug fixed: `PATTERN_TRIGGER`/`CONTINUE_TRIGGER` did not match the actual AI prompt output — signup wall would never trigger. Removed unnecessary `signOut`-before-`signIn` from Google button (superseded by `allowDangerousEmailAccountLinking`). Files: `src/actions/conversation.ts`, `src/app/api/chat/session/route.ts`, `src/app/claim/page.tsx`, `src/app/result/page.tsx`, `src/components/dashboard/ClaimRedirector.tsx`, `src/lib/prompts/insight.ts`, `src/lib/prompts/first-exploration.ts`, `src/components/chat/ChatInterface.tsx`, `src/app/chat/page.tsx`, `src/app/dashboard/layout.tsx`, `src/actions/auth.ts`, `src/app/(auth)/sign-in/page.tsx`.
 
 - **Result Page Redesign** — `/result` redesigned to feel like a personal reveal, not a report card. Hero has an overlapping-rings SVG (pattern symbol) with staggered `anim-fade-up` animations per section. Summary shown in a violet quote card. Directions use short 3–5 word AI-generated labels with expandable "why it fits" text via new `DirectionCard` client component (CSS grid animation). First exploration card shows title + static teaser only — no prompt dump. `FitInsight` schema gains `directionsWhy String[]` (db pushed, client regenerated). `claimAndGenerate` made retry-safe (finds already-claimed conversations for the same user), `fitInsight.create` wrapped in try/catch, return type changed to typed `{ to: string }` redirect. Existing-insight users routed to `/result` instead of `/dashboard`. Session ID only cleared on definitive outcomes. Files: `src/app/result/page.tsx`, `src/components/result/DirectionCard.tsx`, `src/lib/prompts/insight.ts`, `src/actions/conversation.ts`, `src/app/claim/page.tsx`, `prisma/schema.prisma`.
+
+- **Exploration System + Data Architecture Revision** — Prisma schema upgraded with 4 enums (`ExplorationStatus`, `ExplorationType`, `ExplorationIntensity`, `ReflectionSource`). `Exploration` model gains `type`, `intensity`, `generationContext` (Json), `skipReason`, `systemObservations`; drops `aiInterpretation`. `Reflection` model gains `source`, `emotionalState`, `energyLevel`, `curiosityLevel`, `intimidationLevel`, `notes`. `FitInsight` drops `directionsWhy`. `claimAndGenerate` updated: produces typed enum values, 48 h expiry, one-active-exploration guard, AI now returns `type`/`intensity`/`generationContext`. `first-exploration.ts` prompt updated to return full metadata. `insight.ts` prompt cleaned (no `directionsWhy`). Result page and `DirectionCard` simplified. Stale migration history replaced with single baseline migration `20260101000000_initial_schema` (marked applied); `prisma migrate status` is clean. Seed updated to use enum values with reflection `source`/`emotionalState`/signal levels. Files: `prisma/schema.prisma`, `prisma/seed.ts`, `prisma/migrations/20260101000000_initial_schema/migration.sql`, `src/actions/conversation.ts`, `src/lib/prompts/insight.ts`, `src/lib/prompts/first-exploration.ts`, `src/app/result/page.tsx`, `src/components/result/DirectionCard.tsx`.
