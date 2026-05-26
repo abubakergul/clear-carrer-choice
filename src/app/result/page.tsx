@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { ExplorationStatus } from "@/generated/prisma/client";
 import Link from "next/link";
 import DirectionCard from "@/components/result/DirectionCard";
 
@@ -14,7 +15,7 @@ export default async function ResultPage() {
   if (!insight) redirect("/dashboard");
 
   const exploration = await prisma.exploration.findFirst({
-    where: { userId: session.user.id, status: "active" },
+    where: { userId: session.user.id, status: ExplorationStatus.ACTIVE },
     orderBy: { createdAt: "asc" },
   });
 
@@ -70,11 +71,6 @@ export default async function ResultPage() {
         <div className="anim-fade-up mb-8" style={{ animationDelay: "160ms" }}>
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400">
             Paths worth exploring
-            {(insight.directionsWhy?.length ?? 0) > 0 && (
-              <span className="ml-2 font-normal normal-case text-stone-300">
-                — tap to expand
-              </span>
-            )}
           </p>
           <div className="flex flex-col gap-3">
             {insight.directions.map((label, i) => (
@@ -82,7 +78,6 @@ export default async function ResultPage() {
                 key={i}
                 index={i}
                 label={label}
-                why={insight.directionsWhy?.[i]}
               />
             ))}
           </div>

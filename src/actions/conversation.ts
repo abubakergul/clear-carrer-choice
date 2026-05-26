@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import OpenAI from "openai";
 import { INSIGHT_PROMPT } from "@/lib/prompts/insight";
 import { FIRST_EXPLORATION_PROMPT } from "@/lib/prompts/first-exploration";
+import { ExplorationStatus, ExplorationType, ExplorationIntensity } from "@/generated/prisma/client";
 
 export async function saveMessages(
   conversationId: string,
@@ -70,7 +71,7 @@ export async function claimAndGenerate(
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   // Generate FitInsight
-  let insightData: { summary: string; directions: string[]; directionsWhy: string[]; tensions: string[] };
+  let insightData: { summary: string; directions: string[]; tensions: string[] };
   try {
     const insightRes = await openai.responses.create({
       model: "gpt-4.1-mini",
@@ -88,7 +89,6 @@ export async function claimAndGenerate(
         userId,
         summary: insightData.summary,
         directions: insightData.directions,
-        directionsWhy: insightData.directionsWhy ?? [],
         tensions: insightData.tensions,
       },
     });
@@ -96,12 +96,32 @@ export async function claimAndGenerate(
     return { ok: false, error: "insight_generation_failed" };
   }
 
+  // Ensure no existing active exploration before creating one
+  const existingActive = await prisma.exploration.findFirst({
+    where: { userId, status: ExplorationStatus.ACTIVE },
+    select: { id: true },
+  });
+  if (existingActive) return { ok: true };
+
   // Generate first Exploration
   const explorationPrompt = FIRST_EXPLORATION_PROMPT
     .replace("{directions}", insightData.directions.join("\n"))
     .replace("{tensions}", insightData.tensions.join("\n"));
 
-  let explorationData: { title: string; prompt: string };
+  type ExplorationAIResponse = {
+    title: string;
+    prompt: string;
+    estimatedMinutes?: number;
+    type?: string;
+    intensity?: string;
+    generationContext?: {
+      basedOnSignals?: string[];
+      basedOnTensions?: string[];
+      reason?: string;
+    };
+  };
+
+  let explorationData: ExplorationAIResponse;
   try {
     const explorationRes = await openai.responses.create({
       model: "gpt-4.1-mini",
@@ -113,15 +133,28 @@ export async function claimAndGenerate(
     return { ok: false, error: "exploration_generation_failed" };
   }
 
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 1);
+  // Validate and coerce enums returned by the AI
+  const validTypes = Object.values(ExplorationType) as string[];
+  const validIntensities = Object.values(ExplorationIntensity) as string[];
+  const explorationTypeValue = explorationData.type && validTypes.includes(explorationData.type)
+    ? (explorationData.type as ExplorationType)
+    : ExplorationType.OBSERVE;
+  const explorationIntensityValue = explorationData.intensity && validIntensities.includes(explorationData.intensity)
+    ? (explorationData.intensity as ExplorationIntensity)
+    : ExplorationIntensity.VERY_LIGHT;
+
+  // Expire after 48 hours
+  const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
 
   await prisma.exploration.create({
     data: {
       userId,
       title: explorationData.title,
       prompt: explorationData.prompt,
-      status: "active",
+      status: ExplorationStatus.ACTIVE,
+      type: explorationTypeValue,
+      intensity: explorationIntensityValue,
+      generationContext: explorationData.generationContext ?? undefined,
       expiresAt,
     },
   });

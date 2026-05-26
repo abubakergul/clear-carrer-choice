@@ -1,16 +1,34 @@
-# Current Feature
+# Current Feature: Exploration System + Data Architecture Revision
 
 ## Status
 
-<!-- Not Started | In Progress | Completed -->
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Migrate Prisma schema to add `ExplorationStatus`, `ExplorationType`, `ExplorationIntensity`, and `ReflectionSource` enums
+- Update `Exploration` model with `type`, `intensity`, `generationContext` (Json), `skipReason`, `systemObservations` fields
+- Update `Reflection` model with `source`, `emotionalState`, `energyLevel`, `curiosityLevel`, `intimidationLevel` fields
+- Remove `directionsWhy` and `aiInterpretation` from current schema; align `FitInsight` to spec (directions, tensions, summary, version — no extras)
+- Enforce one-active-exploration rule in backend (query guard before creating a new one)
+- Update first-exploration generation (in `claimAndGenerate`) to populate `type`, `intensity`, and `generationContext`
+- Build `/explore` (or dashboard exploration card): shows active exploration title, prompt, estimated duration, "Why this?" context, and Start / Skip / Already know this actions
+- Build reflection UX: signal tap-selection, optional short notes, emotional state capture — triggered on completion, skip, or expiration
+- Wire reflection submission to generate the next exploration via AI (using signals + tensions + prior reflections)
+- Implement expiration logic: mark explorations `EXPIRED` after 48–72 hours, trigger next generation without guilt messaging
+- Update seed data to use new schema shape (enums, new fields)
 
 ## Notes
 
-<!-- Additional context, constraints, or details -->
+- Only ONE `ACTIVE` exploration allowed per user at a time — enforce in both business logic and consider a DB partial unique index
+- Skipping is valuable behavioral data: always collect a lightweight reason (pre-selected options, not free text)
+- The system observes *reactions* (curiosity, resistance, excitement, boredom, intimidation) — never performance or competence
+- Early explorations must be `VERY_LIGHT` or `LIGHT` intensity; avoid `MEDIUM` until patterns are established
+- `generationContext` (Json) stores explainability data: which signals/tensions drove generation and a short reason
+- Reflections use taps/selections as primary input; free text (`notes`) is optional only
+- Expired explorations are NOT failures — UX must avoid guilt, backlog, or streak-breaking language
+- No scores, rankings, personality labels, or completion metrics anywhere in the system
+- `directionsWhy String[]` was added to FitInsight in the Result Page Redesign — spec does not include it; remove during this migration
 
 ## History
 

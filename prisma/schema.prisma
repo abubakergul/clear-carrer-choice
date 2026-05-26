@@ -57,7 +57,6 @@ model FitInsight {
   userId         String   @unique
   summary        String
   directions     String[]
-  directionsWhy  String[]
   tensions       String[]
   version        Int      @default(1)
   createdAt      DateTime @default(now())
@@ -66,33 +65,69 @@ model FitInsight {
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+enum ExplorationStatus {
+  ACTIVE
+  COMPLETED
+  SKIPPED
+  EXPIRED
+}
+
+enum ExplorationType {
+  OBSERVE
+  COMPARE
+  INTERACT
+  SIMULATE
+  REFLECT
+}
+
+enum ExplorationIntensity {
+  VERY_LIGHT
+  LIGHT
+  MEDIUM
+}
+
+enum ReflectionSource {
+  COMPLETION
+  SKIP
+  EXPIRATION
+}
+
 model Exploration {
-  id               String    @id @default(cuid())
-  userId           String
-  fitInsightId     String?
-  title            String
-  prompt           String
-  status           String    // "active" | "completed" | "skipped" | "expired"
-  aiInterpretation String?
-  createdAt        DateTime  @default(now())
-  expiresAt        DateTime?
-  completedAt      DateTime?
-  skippedAt        DateTime?
+  id                  String               @id @default(cuid())
+  userId              String
+  fitInsightId        String?
+  title               String
+  prompt              String
+  status              ExplorationStatus
+  type                ExplorationType?
+  intensity           ExplorationIntensity?
+  generationContext   Json?
+  skipReason          String?
+  systemObservations  Json?
+  createdAt           DateTime             @default(now())
+  expiresAt           DateTime?
+  completedAt         DateTime?
+  skippedAt           DateTime?
 
-  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reflections      Reflection[]
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reflections         Reflection[]
 
-  @@index([userId])
-  @@index([status])
+  @@index([userId, status])
 }
 
 model Reflection {
-  id              String   @id @default(cuid())
-  explorationId   String
-  selectedSignals String[]
-  createdAt       DateTime @default(now())
+  id                  String            @id @default(cuid())
+  explorationId       String
+  source              ReflectionSource?
+  emotionalState      String?
+  energyLevel         Int?
+  curiosityLevel      Int?
+  intimidationLevel   Int?
+  selectedSignals     String[]
+  notes               String?
+  createdAt           DateTime          @default(now())
 
-  exploration     Exploration @relation(fields: [explorationId], references: [id], onDelete: Cascade)
+  exploration         Exploration @relation(fields: [explorationId], references: [id], onDelete: Cascade)
 
   @@index([explorationId])
 }
