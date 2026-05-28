@@ -1,70 +1,16 @@
-# Current Feature: Exploration System
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- ✅ Users can view their active exploration on the dashboard (only one active at a time)
-- ✅ Users can complete an exploration → reflection screen collects signals, energy/curiosity/intimidation (1–5), notes
-- ✅ Reflection submission marks COMPLETED → next exploration generated in background, page auto-refreshes
-- ✅ Users can skip with a lightweight reason via modal overlay (not inline, no scroll jump)
-- ✅ Skip redirects instantly → next exploration generated in background after landing on dashboard
-- ✅ Explorations expire after 48h, marked on dashboard load, shown as non-failure in timeline
-- ✅ Exploration history shown as vertical timeline on dashboard
-- ✅ `/dashboard/pattern` page — proper My Pattern page inside dashboard shell (directions, tensions, summary, exploration signal recap)
-- ✅ Sidebar nav: Home → `/dashboard`, My Pattern → `/dashboard/pattern` (both within dashboard layout, no layout switch)
-- ✅ Consecutive skip detection: 2 skips → prompt hint to vary format; 3+ skips → CRITICAL override (no video, VERY_LIGHT, under 5 min)
-- ✅ Prompts explicitly forbid YouTube-first explorations; give AI 7 mobile-friendly alternatives (Reddit posts, LinkedIn, job descriptions, thought experiments, portfolios, etc.)
-- ⬜ Completed exploration detail — clicking a past COMPLETED exploration should show the reflection that was submitted (signals, scores, notes). Currently detail page only says "You reflected on this one." with no data shown.
-- ⬜ Reflection view on `/dashboard/pattern` only shows 3 most recent — no way to see older ones
-- ⬜ `ExplorationGenerator` triggers on every dashboard load when no active exploration — needs a guard so it doesn't fire if generation is already in progress (race condition if user opens two tabs)
+<!-- Add goals here -->
 
 ## Notes
 
-### Architecture
-
-- **Skip/complete are now instant**: actions only do DB update + `redirect("/dashboard")`. No OpenAI call blocking.
-- **Generation is client-side triggered**: `src/components/dashboard/ExplorationGenerator.tsx` — renders when `!activeExploration`, calls `triggerNextExploration()` server action, then `router.refresh()`.
-- **`triggerNextExploration()`** in `src/actions/exploration.ts` — exported server action, calls `auth()` internally, safe to call from client.
-- **`runGeneration(userId)`** — private function with full OpenAI logic, consecutive-skip detection, prompt building.
-
-### Key files
-
-- `src/actions/exploration.ts` — all exploration server actions
-- `src/lib/prompts/next-exploration.ts` — next exploration prompt (has `{skipWarning}` placeholder)
-- `src/lib/prompts/first-exploration.ts` — first exploration prompt (mobile-first, 7 format alternatives)
-- `src/lib/exploration.ts` — `SKIP_REASONS` constant (not in "use server" file, importable by client)
-- `src/app/dashboard/page.tsx` — dashboard with active card + timeline + ExplorationGenerator
-- `src/app/dashboard/pattern/page.tsx` — My Pattern page with insight + exploration signal recap
-- `src/app/dashboard/explore/[id]/page.tsx` — exploration detail with SkipDialog
-- `src/app/dashboard/explore/[id]/reflect/page.tsx` — reflection page (server)
-- `src/components/dashboard/ReflectionForm.tsx` — reflection form (client, signal chips + 1–5 scales)
-- `src/components/dashboard/SkipDialog.tsx` — skip modal (client, fixed overlay)
-- `src/components/dashboard/ExplorationGenerator.tsx` — background generation trigger (client)
-- `src/components/dashboard/SidebarNav.tsx` — sidebar nav with active state matching
-- `src/app/api/dev/seed-me/route.ts` — POST endpoint to seed demo data for current user (dev only)
-
-### Dev seeding
-
-To see the dashboard with real data, run in browser console while logged in:
-
-```js
-fetch('/api/dev/seed-me', { method: 'POST' }).then(r => r.json()).then(console.log)
-```
-
-This creates a FitInsight + 4 explorations (2 completed with reflections, 1 skipped, 1 active) for the currently logged-in user.
-
-### Known issues / remaining work
-
-1. **Reflection detail view**: `src/app/dashboard/explore/[id]/page.tsx` — completed explorations show "You reflected on this one. Great." but don't fetch or display the actual reflection data. Need to query `prisma.reflection.findFirst({ where: { explorationId } })` and show signals/scores/notes.
-2. **Race condition in ExplorationGenerator**: if the user navigates away and back quickly, `triggerNextExploration` could be called twice. The server-side guard (`if (existing) return`) prevents duplicate explorations, but two simultaneous OpenAI calls could run. Low priority for now.
-3. **Expiry on dashboard load only**: explorations expire only when the user visits the dashboard. No background cron. Fine for now but worth noting.
-
-### Branch
-
-`feature/exploration-system`
+<!-- Add notes here -->
 
 ## History
 
@@ -91,3 +37,5 @@ This creates a FitInsight + 4 explorations (2 completed with reflections, 1 skip
 - **Result Page Redesign** — `/result` redesigned to feel like a personal reveal, not a report card. Hero has an overlapping-rings SVG (pattern symbol) with staggered `anim-fade-up` animations per section. Summary shown in a violet quote card. Directions use short 3–5 word AI-generated labels with expandable "why it fits" text via new `DirectionCard` client component (CSS grid animation). First exploration card shows title + static teaser only — no prompt dump. `FitInsight` schema gains `directionsWhy String[]` (db pushed, client regenerated). `claimAndGenerate` made retry-safe (finds already-claimed conversations for the same user), `fitInsight.create` wrapped in try/catch, return type changed to typed `{ to: string }` redirect. Existing-insight users routed to `/result` instead of `/dashboard`. Session ID only cleared on definitive outcomes. Files: `src/app/result/page.tsx`, `src/components/result/DirectionCard.tsx`, `src/lib/prompts/insight.ts`, `src/actions/conversation.ts`, `src/app/claim/page.tsx`, `prisma/schema.prisma`.
 
 - **Exploration System + Data Architecture Revision** — Prisma schema upgraded with 4 enums (`ExplorationStatus`, `ExplorationType`, `ExplorationIntensity`, `ReflectionSource`). `Exploration` model gains `type`, `intensity`, `generationContext` (Json), `skipReason`, `systemObservations`; drops `aiInterpretation`. `Reflection` model gains `source`, `emotionalState`, `energyLevel`, `curiosityLevel`, `intimidationLevel`, `notes`. `FitInsight` drops `directionsWhy`. `claimAndGenerate` updated: produces typed enum values, 48 h expiry, one-active-exploration guard, AI now returns `type`/`intensity`/`generationContext`. `first-exploration.ts` prompt updated to return full metadata. `insight.ts` prompt cleaned (no `directionsWhy`). Result page and `DirectionCard` simplified. Stale migration history replaced with single baseline migration `20260101000000_initial_schema` (marked applied); `prisma migrate status` is clean. Seed updated to use enum values with reflection `source`/`emotionalState`/signal levels. Files: `prisma/schema.prisma`, `prisma/seed.ts`, `prisma/migrations/20260101000000_initial_schema/migration.sql`, `src/actions/conversation.ts`, `src/lib/prompts/insight.ts`, `src/lib/prompts/first-exploration.ts`, `src/app/result/page.tsx`, `src/components/result/DirectionCard.tsx`.
+
+- **Exploration System** — Dashboard shows one active exploration at a time (dark hero card with type/intensity badges, pulsing Active pill). Complete → reflection form (signal chips + 1–5 scales for energy/curiosity/intimidation + optional notes) → instant redirect → background generation. Skip → lightweight modal overlay (no scroll jump, stone-600 button, instant redirect) → background generation. Explorations expire after 48 h, shown non-judgementally in timeline. Consecutive skip detection: 2 skips → format hint; 3+ → CRITICAL override (no video, VERY_LIGHT, <5 min). Both prompts explicitly forbid YouTube-first explorations; offer 7 mobile-friendly alternatives (Reddit posts, LinkedIn stories, job descriptions, thought experiments, portfolios, articles, comparison browsing). `/dashboard/pattern` is an in-layout page (sidebar stays). `SidebarNav` client component uses `usePathname` for active-state matching. `ExplorationGenerator` client component fires `triggerNextExploration()` on mount then calls `router.refresh()`. Dev seeding via `POST /api/dev/seed-me`. Files: `src/actions/exploration.ts`, `src/lib/exploration.ts`, `src/lib/prompts/next-exploration.ts`, `src/lib/prompts/first-exploration.ts`, `src/app/dashboard/page.tsx`, `src/app/dashboard/layout.tsx`, `src/app/dashboard/pattern/page.tsx`, `src/app/dashboard/explore/[id]/page.tsx`, `src/app/dashboard/explore/[id]/reflect/page.tsx`, `src/components/dashboard/ReflectionForm.tsx`, `src/components/dashboard/SkipDialog.tsx`, `src/components/dashboard/ExplorationGenerator.tsx`, `src/components/dashboard/SidebarNav.tsx`, `src/app/api/dev/seed-me/route.ts`.
