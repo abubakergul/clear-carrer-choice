@@ -85,12 +85,12 @@ export default function UserMenu({ name, email, image }: Props) {
         aria-haspopup="true"
       >
         <UserAvatar name={name} image={image} size={32} />
-        <div className="flex min-w-0 flex-1 flex-col items-start">
-          <span className="truncate text-sm font-medium text-stone-900">
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <p className="truncate text-sm font-medium text-stone-900">
             {name ?? "User"}
-          </span>
+          </p>
           {email && (
-            <span className="truncate text-xs text-stone-400">{email}</span>
+            <p className="truncate text-xs text-stone-400">{email}</p>
           )}
         </div>
         {/* Chevron */}

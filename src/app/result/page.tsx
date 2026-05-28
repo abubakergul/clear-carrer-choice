@@ -116,7 +116,7 @@ export default async function ResultPage() {
               A short reflection designed around your conversation — about 10 minutes.
             </p>
             <Link
-              href="/dashboard"
+              href={`/dashboard/explore/${exploration.id}`}
               className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500"
             >
               Start exploring →

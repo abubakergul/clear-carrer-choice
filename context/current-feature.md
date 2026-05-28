@@ -1,16 +1,70 @@
-# Current Feature
+# Current Feature: Exploration System
 
 ## Status
 
-<!-- Not Started | In Progress | Completed -->
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- ✅ Users can view their active exploration on the dashboard (only one active at a time)
+- ✅ Users can complete an exploration → reflection screen collects signals, energy/curiosity/intimidation (1–5), notes
+- ✅ Reflection submission marks COMPLETED → next exploration generated in background, page auto-refreshes
+- ✅ Users can skip with a lightweight reason via modal overlay (not inline, no scroll jump)
+- ✅ Skip redirects instantly → next exploration generated in background after landing on dashboard
+- ✅ Explorations expire after 48h, marked on dashboard load, shown as non-failure in timeline
+- ✅ Exploration history shown as vertical timeline on dashboard
+- ✅ `/dashboard/pattern` page — proper My Pattern page inside dashboard shell (directions, tensions, summary, exploration signal recap)
+- ✅ Sidebar nav: Home → `/dashboard`, My Pattern → `/dashboard/pattern` (both within dashboard layout, no layout switch)
+- ✅ Consecutive skip detection: 2 skips → prompt hint to vary format; 3+ skips → CRITICAL override (no video, VERY_LIGHT, under 5 min)
+- ✅ Prompts explicitly forbid YouTube-first explorations; give AI 7 mobile-friendly alternatives (Reddit posts, LinkedIn, job descriptions, thought experiments, portfolios, etc.)
+- ⬜ Completed exploration detail — clicking a past COMPLETED exploration should show the reflection that was submitted (signals, scores, notes). Currently detail page only says "You reflected on this one." with no data shown.
+- ⬜ Reflection view on `/dashboard/pattern` only shows 3 most recent — no way to see older ones
+- ⬜ `ExplorationGenerator` triggers on every dashboard load when no active exploration — needs a guard so it doesn't fire if generation is already in progress (race condition if user opens two tabs)
 
 ## Notes
 
-<!-- Additional context, constraints, or details -->
+### Architecture
+
+- **Skip/complete are now instant**: actions only do DB update + `redirect("/dashboard")`. No OpenAI call blocking.
+- **Generation is client-side triggered**: `src/components/dashboard/ExplorationGenerator.tsx` — renders when `!activeExploration`, calls `triggerNextExploration()` server action, then `router.refresh()`.
+- **`triggerNextExploration()`** in `src/actions/exploration.ts` — exported server action, calls `auth()` internally, safe to call from client.
+- **`runGeneration(userId)`** — private function with full OpenAI logic, consecutive-skip detection, prompt building.
+
+### Key files
+
+- `src/actions/exploration.ts` — all exploration server actions
+- `src/lib/prompts/next-exploration.ts` — next exploration prompt (has `{skipWarning}` placeholder)
+- `src/lib/prompts/first-exploration.ts` — first exploration prompt (mobile-first, 7 format alternatives)
+- `src/lib/exploration.ts` — `SKIP_REASONS` constant (not in "use server" file, importable by client)
+- `src/app/dashboard/page.tsx` — dashboard with active card + timeline + ExplorationGenerator
+- `src/app/dashboard/pattern/page.tsx` — My Pattern page with insight + exploration signal recap
+- `src/app/dashboard/explore/[id]/page.tsx` — exploration detail with SkipDialog
+- `src/app/dashboard/explore/[id]/reflect/page.tsx` — reflection page (server)
+- `src/components/dashboard/ReflectionForm.tsx` — reflection form (client, signal chips + 1–5 scales)
+- `src/components/dashboard/SkipDialog.tsx` — skip modal (client, fixed overlay)
+- `src/components/dashboard/ExplorationGenerator.tsx` — background generation trigger (client)
+- `src/components/dashboard/SidebarNav.tsx` — sidebar nav with active state matching
+- `src/app/api/dev/seed-me/route.ts` — POST endpoint to seed demo data for current user (dev only)
+
+### Dev seeding
+
+To see the dashboard with real data, run in browser console while logged in:
+
+```js
+fetch('/api/dev/seed-me', { method: 'POST' }).then(r => r.json()).then(console.log)
+```
+
+This creates a FitInsight + 4 explorations (2 completed with reflections, 1 skipped, 1 active) for the currently logged-in user.
+
+### Known issues / remaining work
+
+1. **Reflection detail view**: `src/app/dashboard/explore/[id]/page.tsx` — completed explorations show "You reflected on this one. Great." but don't fetch or display the actual reflection data. Need to query `prisma.reflection.findFirst({ where: { explorationId } })` and show signals/scores/notes.
+2. **Race condition in ExplorationGenerator**: if the user navigates away and back quickly, `triggerNextExploration` could be called twice. The server-side guard (`if (existing) return`) prevents duplicate explorations, but two simultaneous OpenAI calls could run. Low priority for now.
+3. **Expiry on dashboard load only**: explorations expire only when the user visits the dashboard. No background cron. Fine for now but worth noting.
+
+### Branch
+
+`feature/exploration-system`
 
 ## History
 
