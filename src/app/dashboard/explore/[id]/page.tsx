@@ -5,6 +5,12 @@ import Link from "next/link";
 import { ExplorationStatus } from "@/generated/prisma/client";
 import SkipDialog from "@/components/dashboard/SkipDialog";
 
+function genReason(ctx: unknown): string | null {
+  if (!ctx || typeof ctx !== "object") return null;
+  const r = (ctx as Record<string, unknown>).reason;
+  return typeof r === "string" && r.trim() ? r.trim() : null;
+}
+
 export default async function ExplorationDetailPage({
   params,
 }: {
@@ -16,9 +22,27 @@ export default async function ExplorationDetailPage({
 
   const { id } = await params;
 
-  const exploration = await prisma.exploration.findFirst({
-    where: { id, userId },
-  });
+  const [exploration, recentPast] = await Promise.all([
+    prisma.exploration.findFirst({
+      where: { id, userId },
+      include: { reflections: { take: 1, orderBy: { createdAt: "desc" } } },
+    }),
+    prisma.exploration.findMany({
+      where: { userId, status: { in: ["SKIPPED", "COMPLETED", "EXPIRED"] } },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      select: { status: true },
+    }),
+  ]);
+
+  const consecutiveSkips = (() => {
+    let count = 0;
+    for (const e of recentPast) {
+      if (e.status === "SKIPPED") count++;
+      else break;
+    }
+    return count;
+  })();
 
   if (!exploration) notFound();
 
@@ -70,6 +94,13 @@ export default async function ExplorationDetailPage({
         </p>
       </div>
 
+      {/* Why this exploration */}
+      {genReason(exploration.generationContext) && (
+        <p className="mb-6 text-xs italic text-stone-400">
+          {genReason(exploration.generationContext)}
+        </p>
+      )}
+
       {/* What to notice */}
       <div className="mb-8 rounded-2xl border border-violet-100 bg-violet-50 px-5 py-4">
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-violet-500">
@@ -104,16 +135,59 @@ export default async function ExplorationDetailPage({
             I did it — reflect →
           </Link>
           <div className="mt-4">
-            <SkipDialog explorationId={exploration.id} />
+            <SkipDialog explorationId={exploration.id} consecutiveSkips={consecutiveSkips} />
           </div>
         </>
       )}
 
-      {isCompleted && (
-        <div className="rounded-xl bg-green-50 px-5 py-4 text-sm text-green-700">
-          You reflected on this one. Great.
-        </div>
-      )}
+      {isCompleted && (() => {
+        const reflection = exploration.reflections[0];
+        if (!reflection) return (
+          <div className="rounded-xl bg-green-50 px-5 py-4 text-sm text-green-700">
+            You reflected on this one. Great.
+          </div>
+        );
+        return (
+          <div className="flex flex-col gap-5 rounded-2xl border border-stone-100 bg-stone-50 px-5 py-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-stone-400">
+              Your reflection
+            </p>
+
+            {/* Signal chips */}
+            <div className="flex flex-wrap gap-2">
+              {reflection.selectedSignals.map((s) => (
+                <span
+                  key={s}
+                  className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-xs font-medium text-violet-700"
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+
+            {/* Scores */}
+            <div className="flex gap-6 text-sm text-stone-600">
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs text-stone-400">Energy</span>
+                <span className="font-semibold text-stone-800">{reflection.energyLevel}/5</span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs text-stone-400">Curiosity</span>
+                <span className="font-semibold text-stone-800">{reflection.curiosityLevel}/5</span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-xs text-stone-400">Intimidation</span>
+                <span className="font-semibold text-stone-800">{reflection.intimidationLevel}/5</span>
+              </div>
+            </div>
+
+            {/* Notes */}
+            {reflection.notes && (
+              <p className="text-sm italic text-stone-500">&ldquo;{reflection.notes}&rdquo;</p>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }

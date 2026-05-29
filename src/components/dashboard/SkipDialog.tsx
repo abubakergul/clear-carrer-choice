@@ -4,7 +4,13 @@ import { useState, useTransition } from "react";
 import { skipExploration } from "@/actions/exploration";
 import { SKIP_REASONS } from "@/lib/exploration";
 
-export default function SkipDialog({ explorationId }: { explorationId: string }) {
+export default function SkipDialog({
+  explorationId,
+  consecutiveSkips = 0,
+}: {
+  explorationId: string;
+  consecutiveSkips?: number;
+}) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<string>("");
   const [pending, startTransition] = useTransition();
@@ -40,6 +46,11 @@ export default function SkipDialog({ explorationId }: { explorationId: string })
 
           {/* Modal */}
           <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            {consecutiveSkips >= 2 && (
+              <div className="mb-4 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                You&apos;ve skipped a few lately — we&apos;ll try something shorter and different next time.
+              </div>
+            )}
             <h3 className="mb-0.5 text-sm font-semibold text-stone-800">
               Why are you skipping?
             </h3>

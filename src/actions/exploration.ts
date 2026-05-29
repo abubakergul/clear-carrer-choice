@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import OpenAI from "openai";
 import { NEXT_EXPLORATION_PROMPT } from "@/lib/prompts/next-exploration";
+import { INSIGHT_EVOLUTION_PROMPT } from "@/lib/prompts/insight-evolution";
 import {
   ExplorationStatus,
   ExplorationType,
@@ -205,7 +206,86 @@ export async function completeExploration(
     }),
   ]);
 
+  const completedCount = await prisma.exploration.count({
+    where: { userId, status: ExplorationStatus.COMPLETED },
+  });
+  if (completedCount % 3 === 0) {
+    // Fire-and-forget — does not block the redirect
+    runInsightEvolution(userId).catch(() => {});
+  }
+
   redirect("/dashboard");
+}
+
+// ─── FitInsight evolution (fire-and-forget) ───────────────────────────────────
+
+async function runInsightEvolution(userId: string): Promise<void> {
+  const insight = await prisma.fitInsight.findUnique({
+    where: { userId },
+    select: { id: true, summary: true, directions: true, tensions: true },
+  });
+  if (!insight) return;
+
+  const recentReflections = await prisma.reflection.findMany({
+    where: {
+      exploration: { userId, status: ExplorationStatus.COMPLETED },
+      source: ReflectionSource.COMPLETION,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 6,
+    select: {
+      selectedSignals: true,
+      energyLevel: true,
+      curiosityLevel: true,
+      intimidationLevel: true,
+      notes: true,
+      exploration: { select: { title: true } },
+    },
+  });
+
+  const reflectionText = recentReflections
+    .map((r) =>
+      `- "${r.exploration.title}": signals=[${r.selectedSignals.join(", ")}], energy=${r.energyLevel}/5, curiosity=${r.curiosityLevel}/5, intimidation=${r.intimidationLevel}/5${r.notes ? `, note="${r.notes}"` : ""}`
+    )
+    .join("\n");
+
+  const prompt = INSIGHT_EVOLUTION_PROMPT
+    .replace("{summary}", insight.summary)
+    .replace("{directions}", insight.directions.join("\n"))
+    .replace("{tensions}", insight.tensions.join("\n"))
+    .replace("{reflections}", reflectionText || "No reflections yet.");
+
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  type EvolutionResponse = {
+    summary: string;
+    directions: string[];
+    tensions: string[];
+    patternSummary: string;
+  };
+
+  let data: EvolutionResponse;
+  try {
+    const res = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: [{ role: "user", content: prompt }],
+    });
+    const raw = res.output_text.replace(/```(?:json)?\n?/g, "").trim();
+    data = JSON.parse(raw);
+  } catch {
+    return;
+  }
+
+  await prisma.fitInsight.update({
+    where: { id: insight.id },
+    data: {
+      summary: data.summary,
+      directions: data.directions,
+      tensions: data.tensions,
+      patternSummary: data.patternSummary || null,
+      version: { increment: 1 },
+    },
+  });
 }
 
 // ─── Expiry ───────────────────────────────────────────────────────────────────

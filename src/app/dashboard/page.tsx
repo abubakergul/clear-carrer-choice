@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ExplorationStatus } from "@/generated/prisma/client";
 import { markExpiredExplorations } from "@/actions/exploration";
 import ExplorationGenerator from "@/components/dashboard/ExplorationGenerator";
+import CoolDownTimer from "@/components/dashboard/CoolDownTimer";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -51,6 +52,13 @@ export default async function DashboardPage() {
       },
       orderBy: { createdAt: "desc" },
       take: 20,
+      include: {
+        reflections: {
+          take: 1,
+          orderBy: { createdAt: "desc" },
+          select: { selectedSignals: true },
+        },
+      },
     }),
   ]);
 
@@ -58,6 +66,33 @@ export default async function DashboardPage() {
   const completedCount = pastExplorations.filter(
     (e) => e.status === ExplorationStatus.COMPLETED
   ).length;
+  const COOLDOWN_MS = 12 * 60 * 60 * 1000;
+
+  const consecutiveSkipItems = (() => {
+    const items: typeof pastExplorations = [];
+    for (const e of pastExplorations) {
+      if (e.status === ExplorationStatus.SKIPPED) items.push(e);
+      else break;
+    }
+    return items;
+  })();
+  const consecutiveSkips = consecutiveSkipItems.length;
+
+  // Detect whether they already went through a cooldown (12h+ gap between any two consecutive skips)
+  const wentThroughCooldown = consecutiveSkipItems.length >= 2 && (() => {
+    for (let i = 0; i < consecutiveSkipItems.length - 1; i++) {
+      const newer = consecutiveSkipItems[i].skippedAt?.getTime() ?? 0;
+      const older = consecutiveSkipItems[i + 1].skippedAt?.getTime() ?? 0;
+      if (newer - older >= COOLDOWN_MS) return true;
+    }
+    return false;
+  })();
+
+  const lastSkipAt = consecutiveSkipItems[0]?.skippedAt?.getTime() ?? null;
+  const lastSkipAge = lastSkipAt ? Date.now() - lastSkipAt : null;
+  const isDisengaged = wentThroughCooldown && consecutiveSkips >= 1;
+  const inCoolDown = !isDisengaged && consecutiveSkips >= 3 && lastSkipAge !== null && lastSkipAge < COOLDOWN_MS;
+  const coolDownEndsAt = lastSkipAt ? lastSkipAt + COOLDOWN_MS : null;
   const today = new Intl.DateTimeFormat("en", {
     weekday: "long", month: "long", day: "numeric",
   }).format(new Date());
@@ -80,6 +115,17 @@ export default async function DashboardPage() {
         <span className="text-xs text-stone-400">{today}</span>
       </div>
 
+      {/* ── Pattern milestone banner ───────────────────── */}
+      {completedCount >= 3 && (
+        <Link
+          href="/dashboard/pattern"
+          className="mb-7 flex items-center justify-between rounded-2xl border border-violet-100 bg-violet-50 px-5 py-3.5 text-sm text-violet-800 transition hover:bg-violet-100"
+        >
+          <span>A pattern is forming — see what we&apos;ve noticed</span>
+          <span className="text-violet-400">→</span>
+        </Link>
+      )}
+
       {/* ── Active exploration ─────────────────────────── */}
       <section className="mb-10">
         <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
@@ -87,61 +133,81 @@ export default async function DashboardPage() {
         </p>
 
         {activeExploration ? (
-          <div className="relative overflow-hidden rounded-2xl bg-stone-950 p-7 text-white">
-            <div className="pointer-events-none absolute -top-10 -right-10 h-48 w-48 rounded-full bg-violet-700 opacity-20 blur-3xl" />
-            <div className="pointer-events-none absolute bottom-0 left-1/2 h-24 w-64 -translate-x-1/2 rounded-full bg-violet-900 opacity-10 blur-2xl" />
-
-            <div className="relative">
-              <div className="mb-5 flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/30 bg-violet-500/15 px-2.5 py-1 text-[11px] font-semibold text-violet-400">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-400" />
-                  Active
-                </span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-stone-400">
-                  {typeLabel(activeExploration.type)}
-                </span>
-                <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-stone-400">
-                  {intensityLabel(activeExploration.intensity)}
-                </span>
-              </div>
-
-              <h2 className="mb-3 max-w-lg text-xl font-bold leading-snug tracking-tight">
-                {activeExploration.title}
-              </h2>
-              <p className="mb-8 max-w-md line-clamp-2 text-sm leading-relaxed text-stone-400">
-                {activeExploration.prompt}
-              </p>
-
-              <Link
-                href={`/dashboard/explore/${activeExploration.id}`}
-                className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98]"
-              >
-                Open exploration
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                  <path d="M2.5 7h9m-4-4 4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </Link>
+          <div className="rounded-2xl border border-violet-100 bg-violet-50 p-7">
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-600">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-500" />
+                Up next
+              </span>
+              <span className="rounded-full bg-white border border-violet-100 px-2.5 py-1 text-[11px] text-stone-500">
+                {typeLabel(activeExploration.type)}
+              </span>
+              <span className="rounded-full bg-white border border-violet-100 px-2.5 py-1 text-[11px] text-stone-500">
+                {intensityLabel(activeExploration.intensity)}
+              </span>
             </div>
+
+            <h2 className="mb-2 max-w-lg text-xl font-bold leading-snug tracking-tight text-stone-900">
+              {activeExploration.title}
+            </h2>
+            <p className="mb-6 max-w-md line-clamp-2 text-sm leading-relaxed text-stone-500">
+              {activeExploration.prompt}
+            </p>
+
+            <Link
+              href={`/dashboard/explore/${activeExploration.id}`}
+              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98]"
+            >
+              Open exploration
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2.5 7h9m-4-4 4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+          </div>
+        ) : isDisengaged ? (
+          <div className="rounded-2xl border border-stone-100 bg-stone-50 px-7 py-8">
+            <p className="mb-1 text-sm font-semibold text-stone-700">Explorations don&apos;t seem to be clicking right now.</p>
+            <p className="mb-5 max-w-sm text-sm leading-relaxed text-stone-400">
+              That&apos;s okay — not every moment is right for this. Your pattern is always here when you want to reflect on what you&apos;ve noticed so far.
+            </p>
+            <Link
+              href="/dashboard/pattern"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-600 hover:text-violet-700"
+            >
+              See your pattern →
+            </Link>
+          </div>
+        ) : inCoolDown && coolDownEndsAt ? (
+          <div className="rounded-2xl border border-stone-100 bg-stone-50 px-7 py-8">
+            <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+              Next exploration unlocks in
+            </p>
+            <div className="my-3">
+              <CoolDownTimer endsAt={coolDownEndsAt} />
+            </div>
+            <p className="max-w-sm text-sm leading-relaxed text-stone-400">
+              No rush. Come back when something feels right — a new exploration will be here.
+            </p>
           </div>
         ) : (
           <>
             <ExplorationGenerator />
-            <div className="flex items-center gap-4 rounded-2xl border border-stone-200 bg-white px-7 py-6">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center">
+            <div className="rounded-2xl border border-violet-100 bg-violet-50 px-7 py-6">
+              <div className="flex items-center gap-4">
                 <svg
-                  className="animate-spin text-violet-500"
-                  width="20" height="20" viewBox="0 0 20 20" fill="none"
+                  className="animate-spin shrink-0 text-violet-400"
+                  width="18" height="18" viewBox="0 0 20 20" fill="none"
                   aria-hidden="true"
                 >
-                  <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" strokeOpacity="0.2" />
+                  <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" strokeOpacity="0.25" />
                   <path d="M10 2a8 8 0 0 1 8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-stone-700">Generating your next exploration…</p>
-                <p className="mt-0.5 text-xs text-stone-400">
-                  This takes a few seconds. The page will update automatically.
-                </p>
+                <div>
+                  <p className="text-sm font-semibold text-stone-800">Something new is on its way…</p>
+                  <p className="mt-0.5 text-xs text-stone-400">
+                    This takes a few seconds. The page will update automatically.
+                  </p>
+                </div>
               </div>
             </div>
           </>
@@ -183,6 +249,18 @@ export default async function DashboardPage() {
                       <p className="mt-1 text-xs text-stone-400">
                         {statusText(e.status, e.skipReason)}
                       </p>
+                      {done && e.reflections[0]?.selectedSignals.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {e.reflections[0].selectedSignals.slice(0, 3).map((s) => (
+                            <span
+                              key={s}
+                              className="rounded-full border border-violet-100 bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-600"
+                            >
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -193,6 +271,12 @@ export default async function DashboardPage() {
       )}
     </div>
   );
+}
+
+function generationReason(ctx: unknown): string | null {
+  if (!ctx || typeof ctx !== "object") return null;
+  const r = (ctx as Record<string, unknown>).reason;
+  return typeof r === "string" && r.trim() ? r.trim() : null;
 }
 
 function intensityLabel(i: string | null | undefined) {

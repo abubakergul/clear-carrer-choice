@@ -1,16 +1,63 @@
-# Current Feature
+# Current Feature: Reflection + Signal System
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Add goals here -->
+- ⬜ Align signal chips in `ReflectionForm` with spec's fixed curated list: Curious, Energized, Calm, Excited, Engaged, Overwhelmed, Intimidated, Bored, Confused, Resistant, Creative, Structured (12 chips, replaces current 10 custom labels)
+- ⬜ Reflection detail view — completed exploration detail page shows the submitted reflection (signals as chips, energy/curiosity/intimidation scores, notes if any). Currently shows "You reflected on this one. Great." with no data.
+- ⬜ Timeline signal preview — past COMPLETED entries in the dashboard journey timeline show up to 3 signal chips alongside the title and date
+- ⬜ FitInsight evolution — after every 3rd completed reflection, re-run insight generation using accumulated signal data to update `summary`, `directions`, `tensions`, and increment `version`. Evolution should be gradual; no dramatic shifts from a single reflection.
+- ⬜ Pattern page synthesis — `/dashboard/pattern` shows an AI-generated pattern observation paragraph ("You consistently feel curious and energized in creative/collaborative contexts, but resistant in highly structured solo work") derived from accumulated signals, replacing the current raw signal chip display
+- ⬜ Synthesis milestone banner — once the user has 3+ completed explorations, show a subtle banner on the dashboard ("A pattern is forming — see what we've noticed →") linking to `/dashboard/pattern`
 
 ## Notes
 
-<!-- Add notes here -->
+### What's already built (do not rebuild)
+
+- `ReflectionForm.tsx` — signal chips + 1–5 scales (energy, curiosity, intimidation) + optional notes + submit guard. Only the chip labels need updating, not the structure.
+- `Reflection` schema — `selectedSignals String[]`, `energyLevel`, `curiosityLevel`, `intimidationLevel`, `notes`, `source` (COMPLETION / SKIP / EXPIRATION). No schema changes needed.
+- `FitInsight` schema — `summary`, `directions`, `tensions`, `version Int @default(1)`. Already has `version` field ready for evolution tracking.
+- `/dashboard/pattern` — shows FitInsight + last 3 completed explorations with signals. Needs pattern synthesis paragraph added, not a full rewrite.
+
+### FitInsight evolution design
+
+- Trigger: inside `completeExploration()` server action, after saving the reflection — check if `completedCount % 3 === 0` (i.e. every 3rd completion). If yes, fire evolution asynchronously (do NOT block the redirect).
+- Evolution prompt: send current `summary`/`directions`/`tensions` + last 6 reflections (signals + scores) → ask AI to return updated `summary`, `directions`, `tensions`. Instruct AI: evolve slowly, don't contradict strongly unless pattern is clear.
+- DB update: `prisma.fitInsight.update({ data: { summary, directions, tensions, version: { increment: 1 } } })`.
+- Keep evolution non-blocking — user redirects instantly, evolution runs in the background (fire-and-forget, same pattern as `ExplorationGenerator`).
+
+### Pattern synthesis design
+
+- On `/dashboard/pattern` page load, query last 10 completed reflections' signals + scores.
+- If ≥ 3 completed reflections exist: show AI-generated synthesis paragraph at the top of the page.
+- Cache this as a field on `FitInsight` (`patternSummary String?`) — regenerate it during FitInsight evolution, not on every page load.
+- If field is null: show nothing (no synthesis section yet).
+
+### Signal list (fixed — do not add dynamic signals)
+
+```text
+Curious · Energized · Calm · Excited · Engaged
+Overwhelmed · Intimidated · Bored · Confused
+Resistant · Creative · Structured
+```
+
+### Language rules (from spec)
+
+Avoid: performance, productivity, achievement, success, score  
+Prefer: notice, reaction, curiosity, energy, exploration
+
+### Key files to touch
+
+- `src/components/dashboard/ReflectionForm.tsx` — update chip labels
+- `src/app/dashboard/explore/[id]/page.tsx` — add reflection detail view for COMPLETED status
+- `src/app/dashboard/page.tsx` — add signal chips to timeline entries + synthesis milestone banner
+- `src/actions/exploration.ts` — trigger FitInsight evolution after every 3rd completion
+- `src/lib/prompts/insight-evolution.ts` — new prompt for evolution (keep separate from initial insight prompt)
+- `src/app/dashboard/pattern/page.tsx` — add pattern synthesis paragraph
+- `prisma/schema.prisma` — add `patternSummary String?` to `FitInsight`
 
 ## History
 

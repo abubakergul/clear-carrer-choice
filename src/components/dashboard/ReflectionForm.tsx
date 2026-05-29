@@ -4,16 +4,18 @@ import { useState, useTransition } from "react";
 import { completeExploration } from "@/actions/exploration";
 
 const SIGNALS = [
-  "Felt curious",
-  "Felt engaged",
-  "Felt energized",
-  "Felt bored",
-  "Felt intimidated",
-  "Felt resistant",
-  "Wanted to keep going",
-  "Wanted to stop",
-  "Felt surprised",
-  "Felt comfortable",
+  "Curious",
+  "Energized",
+  "Calm",
+  "Excited",
+  "Engaged",
+  "Overwhelmed",
+  "Intimidated",
+  "Bored",
+  "Confused",
+  "Resistant",
+  "Creative",
+  "Structured",
 ];
 
 type ScaleProps = {
