@@ -1,63 +1,16 @@
-# Current Feature: Reflection + Signal System
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- ⬜ Align signal chips in `ReflectionForm` with spec's fixed curated list: Curious, Energized, Calm, Excited, Engaged, Overwhelmed, Intimidated, Bored, Confused, Resistant, Creative, Structured (12 chips, replaces current 10 custom labels)
-- ⬜ Reflection detail view — completed exploration detail page shows the submitted reflection (signals as chips, energy/curiosity/intimidation scores, notes if any). Currently shows "You reflected on this one. Great." with no data.
-- ⬜ Timeline signal preview — past COMPLETED entries in the dashboard journey timeline show up to 3 signal chips alongside the title and date
-- ⬜ FitInsight evolution — after every 3rd completed reflection, re-run insight generation using accumulated signal data to update `summary`, `directions`, `tensions`, and increment `version`. Evolution should be gradual; no dramatic shifts from a single reflection.
-- ⬜ Pattern page synthesis — `/dashboard/pattern` shows an AI-generated pattern observation paragraph ("You consistently feel curious and energized in creative/collaborative contexts, but resistant in highly structured solo work") derived from accumulated signals, replacing the current raw signal chip display
-- ⬜ Synthesis milestone banner — once the user has 3+ completed explorations, show a subtle banner on the dashboard ("A pattern is forming — see what we've noticed →") linking to `/dashboard/pattern`
+<!-- Add goals here -->
 
 ## Notes
 
-### What's already built (do not rebuild)
-
-- `ReflectionForm.tsx` — signal chips + 1–5 scales (energy, curiosity, intimidation) + optional notes + submit guard. Only the chip labels need updating, not the structure.
-- `Reflection` schema — `selectedSignals String[]`, `energyLevel`, `curiosityLevel`, `intimidationLevel`, `notes`, `source` (COMPLETION / SKIP / EXPIRATION). No schema changes needed.
-- `FitInsight` schema — `summary`, `directions`, `tensions`, `version Int @default(1)`. Already has `version` field ready for evolution tracking.
-- `/dashboard/pattern` — shows FitInsight + last 3 completed explorations with signals. Needs pattern synthesis paragraph added, not a full rewrite.
-
-### FitInsight evolution design
-
-- Trigger: inside `completeExploration()` server action, after saving the reflection — check if `completedCount % 3 === 0` (i.e. every 3rd completion). If yes, fire evolution asynchronously (do NOT block the redirect).
-- Evolution prompt: send current `summary`/`directions`/`tensions` + last 6 reflections (signals + scores) → ask AI to return updated `summary`, `directions`, `tensions`. Instruct AI: evolve slowly, don't contradict strongly unless pattern is clear.
-- DB update: `prisma.fitInsight.update({ data: { summary, directions, tensions, version: { increment: 1 } } })`.
-- Keep evolution non-blocking — user redirects instantly, evolution runs in the background (fire-and-forget, same pattern as `ExplorationGenerator`).
-
-### Pattern synthesis design
-
-- On `/dashboard/pattern` page load, query last 10 completed reflections' signals + scores.
-- If ≥ 3 completed reflections exist: show AI-generated synthesis paragraph at the top of the page.
-- Cache this as a field on `FitInsight` (`patternSummary String?`) — regenerate it during FitInsight evolution, not on every page load.
-- If field is null: show nothing (no synthesis section yet).
-
-### Signal list (fixed — do not add dynamic signals)
-
-```text
-Curious · Energized · Calm · Excited · Engaged
-Overwhelmed · Intimidated · Bored · Confused
-Resistant · Creative · Structured
-```
-
-### Language rules (from spec)
-
-Avoid: performance, productivity, achievement, success, score  
-Prefer: notice, reaction, curiosity, energy, exploration
-
-### Key files to touch
-
-- `src/components/dashboard/ReflectionForm.tsx` — update chip labels
-- `src/app/dashboard/explore/[id]/page.tsx` — add reflection detail view for COMPLETED status
-- `src/app/dashboard/page.tsx` — add signal chips to timeline entries + synthesis milestone banner
-- `src/actions/exploration.ts` — trigger FitInsight evolution after every 3rd completion
-- `src/lib/prompts/insight-evolution.ts` — new prompt for evolution (keep separate from initial insight prompt)
-- `src/app/dashboard/pattern/page.tsx` — add pattern synthesis paragraph
-- `prisma/schema.prisma` — add `patternSummary String?` to `FitInsight`
+<!-- Add notes here -->
 
 ## History
 
@@ -86,3 +39,5 @@ Prefer: notice, reaction, curiosity, energy, exploration
 - **Exploration System + Data Architecture Revision** — Prisma schema upgraded with 4 enums (`ExplorationStatus`, `ExplorationType`, `ExplorationIntensity`, `ReflectionSource`). `Exploration` model gains `type`, `intensity`, `generationContext` (Json), `skipReason`, `systemObservations`; drops `aiInterpretation`. `Reflection` model gains `source`, `emotionalState`, `energyLevel`, `curiosityLevel`, `intimidationLevel`, `notes`. `FitInsight` drops `directionsWhy`. `claimAndGenerate` updated: produces typed enum values, 48 h expiry, one-active-exploration guard, AI now returns `type`/`intensity`/`generationContext`. `first-exploration.ts` prompt updated to return full metadata. `insight.ts` prompt cleaned (no `directionsWhy`). Result page and `DirectionCard` simplified. Stale migration history replaced with single baseline migration `20260101000000_initial_schema` (marked applied); `prisma migrate status` is clean. Seed updated to use enum values with reflection `source`/`emotionalState`/signal levels. Files: `prisma/schema.prisma`, `prisma/seed.ts`, `prisma/migrations/20260101000000_initial_schema/migration.sql`, `src/actions/conversation.ts`, `src/lib/prompts/insight.ts`, `src/lib/prompts/first-exploration.ts`, `src/app/result/page.tsx`, `src/components/result/DirectionCard.tsx`.
 
 - **Exploration System** — Dashboard shows one active exploration at a time (dark hero card with type/intensity badges, pulsing Active pill). Complete → reflection form (signal chips + 1–5 scales for energy/curiosity/intimidation + optional notes) → instant redirect → background generation. Skip → lightweight modal overlay (no scroll jump, stone-600 button, instant redirect) → background generation. Explorations expire after 48 h, shown non-judgementally in timeline. Consecutive skip detection: 2 skips → format hint; 3+ → CRITICAL override (no video, VERY_LIGHT, <5 min). Both prompts explicitly forbid YouTube-first explorations; offer 7 mobile-friendly alternatives (Reddit posts, LinkedIn stories, job descriptions, thought experiments, portfolios, articles, comparison browsing). `/dashboard/pattern` is an in-layout page (sidebar stays). `SidebarNav` client component uses `usePathname` for active-state matching. `ExplorationGenerator` client component fires `triggerNextExploration()` on mount then calls `router.refresh()`. Dev seeding via `POST /api/dev/seed-me`. Files: `src/actions/exploration.ts`, `src/lib/exploration.ts`, `src/lib/prompts/next-exploration.ts`, `src/lib/prompts/first-exploration.ts`, `src/app/dashboard/page.tsx`, `src/app/dashboard/layout.tsx`, `src/app/dashboard/pattern/page.tsx`, `src/app/dashboard/explore/[id]/page.tsx`, `src/app/dashboard/explore/[id]/reflect/page.tsx`, `src/components/dashboard/ReflectionForm.tsx`, `src/components/dashboard/SkipDialog.tsx`, `src/components/dashboard/ExplorationGenerator.tsx`, `src/components/dashboard/SidebarNav.tsx`, `src/app/api/dev/seed-me/route.ts`.
+
+- **Reflection + Signal System** — ReflectionForm updated to 12-chip curated signal list (Curious, Energized, Calm, Excited, Engaged, Overwhelmed, Intimidated, Bored, Confused, Resistant, Creative, Structured). Completed exploration detail page shows full reflection data (signal chips, energy/curiosity/intimidation scores, notes). Dashboard timeline shows up to 3 signal chips on completed entries. Milestone banner appears at 3+ completions linking to `/dashboard/pattern`. FitInsight evolution fires every 3rd completion (fire-and-forget): fetches last 6 reflections, updates summary/directions/tensions/patternSummary, increments version. `patternSummary String?` added to FitInsight schema (migration `20260529134248_add_pattern_summary`). Pattern page redesigned: animated signal frequency bars (grow on load, staggered), pulsing rings SVG, staggered section fade-ins, hover-lift on direction/tension cards. Active exploration card redesigned to violet-50 (clean, calm). 12h cooldown countdown timer (violet) shown after 3 consecutive skips; disengaged state (soft exit to pattern page) shown after skipping through a cooldown. SkipDialog shows amber notice at 2+ consecutive skips. Explore route loading skeleton added. Files: `src/components/dashboard/ReflectionForm.tsx`, `src/app/dashboard/explore/[id]/page.tsx`, `src/app/dashboard/explore/[id]/loading.tsx`, `src/app/dashboard/page.tsx`, `src/app/dashboard/pattern/page.tsx`, `src/actions/exploration.ts`, `src/lib/prompts/insight-evolution.ts`, `src/components/dashboard/CoolDownTimer.tsx`, `src/components/dashboard/SkipDialog.tsx`, `prisma/schema.prisma`.
