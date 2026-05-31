@@ -1,16 +1,28 @@
-# Current Feature
+# Current Feature: Clarity Output
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Add goals here -->
+- Add `/dashboard/clarity` page that synthesizes accumulated signal data into a personal pattern report
+- Implement progressive unlock: no access at 0–2 completions, teaser on `/dashboard/pattern` at 3–4, full output at 5+ completed explorations
+- Page has 4 sections: What We Noticed (3–5 observations), What's Still Uncertain (1–2 honest gaps), Environments Worth Exploring (2–3 with one concrete action each), What To Do Next (2–3 light next steps)
+- Generate output on first visit (non-blocking, polling every 3s like ExplorationGenerator), cache in DB as JSON on `FitInsight.clarityOutput`
+- Regenerate automatically when `FitInsight.version` has advanced since clarity was last generated (tracked via `clarityInsightVersion`)
+- Language is strictly observational — no labels, scores, or prescriptive career titles
+- Add `clarityOutput String?`, `clarityUnlockedAt DateTime?`, `clarityInsightVersion Int @default(0)` to `FitInsight` in schema
 
 ## Notes
 
-<!-- Add notes here -->
+- **Unlock threshold confirmed: 5+ completed explorations.** Teaser shown at 3–4, full output at 5+. The "≥ 7" mention in the spec's generation flow section is a typo — ignore it.
+- Prompt receives: `FitInsight.summary`, `directions`, `tensions`, last 10 completed reflections (signals + energy/curiosity/intimidation levels), recent skip reasons
+- Prompt returns JSON: `{ observations, uncertainties, environments: [{ title, reasoning, action }], nextSteps }`
+- Prompt file: `src/lib/prompts/clarity-output.ts`
+- Link to this page from `/dashboard/pattern` once unlocked; back link from clarity page returns to pattern
+- No charts, percentages, or scores — clean spacious layout with violet accents
+- Key files: `src/app/dashboard/clarity/page.tsx`, `src/actions/exploration.ts` (add `generateClarityOutput`), `src/lib/prompts/clarity-output.ts`, `prisma/schema.prisma`
 
 ## History
 
