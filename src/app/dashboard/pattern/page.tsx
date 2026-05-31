@@ -131,6 +131,33 @@ export default async function PatternPage() {
         </section>
       )}
 
+      {/* ── Clarity Output CTA ───────────────────────────── */}
+      {totalCompleted >= 5 ? (
+        <div className="mt-8 rounded-xl border border-violet-200 bg-violet-50 px-5 py-4">
+          <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-widest text-violet-500">
+            Ready
+          </p>
+          <p className="mb-3 text-sm font-medium text-violet-900">
+            Your Clarity Output is available.
+          </p>
+          <Link
+            href="/dashboard/clarity"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-violet-700"
+          >
+            View Clarity Output
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+              <path d="M4.5 2L8.5 6l-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
+        </div>
+      ) : totalCompleted >= 3 ? (
+        <div className="mt-8 rounded-xl border border-stone-100 bg-stone-50 px-5 py-4">
+          <p className="text-sm text-stone-500">
+            Clarity Output unlocks after 5 explorations. You&apos;ve completed {totalCompleted} so far.
+          </p>
+        </div>
+      ) : null}
+
       {/* ── Disclaimer ───────────────────────────────────── */}
       <p className="mt-4 text-xs text-stone-400">
         A starting point, not a verdict. Speak with a counselor if you&apos;re feeling stuck.{" "}

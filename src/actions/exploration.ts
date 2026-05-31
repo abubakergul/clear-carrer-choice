@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import OpenAI from "openai";
 import { NEXT_EXPLORATION_PROMPT } from "@/lib/prompts/next-exploration";
 import { INSIGHT_EVOLUTION_PROMPT } from "@/lib/prompts/insight-evolution";
+import { CLARITY_OUTPUT_PROMPT } from "@/lib/prompts/clarity-output";
 import {
   ExplorationStatus,
   ExplorationType,
@@ -295,4 +296,105 @@ export async function markExpiredExplorations(userId: string): Promise<void> {
     where: { userId, status: ExplorationStatus.ACTIVE, expiresAt: { lt: new Date() } },
     data: { status: ExplorationStatus.EXPIRED },
   });
+}
+
+// ─── Clarity Output generation ────────────────────────────────────────────────
+
+type ClarityOutputData = {
+  observations: string[];
+  uncertainties: string[];
+  environments: { title: string; reasoning: string; action: string }[];
+  nextSteps: string[];
+};
+
+export async function generateClarityOutput(): Promise<{ ok: boolean }> {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false };
+  const userId = session.user.id;
+
+  const insight = await prisma.fitInsight.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+      summary: true,
+      directions: true,
+      tensions: true,
+      version: true,
+      clarityOutput: true,
+      clarityInsightVersion: true,
+    },
+  });
+  if (!insight) return { ok: false };
+
+  // Already generated and insight hasn't evolved since — skip
+  if (insight.clarityOutput && insight.clarityInsightVersion >= insight.version) {
+    return { ok: true };
+  }
+
+  const [recentReflections, recentSkips] = await Promise.all([
+    prisma.reflection.findMany({
+      where: {
+        exploration: { userId, status: ExplorationStatus.COMPLETED },
+        source: ReflectionSource.COMPLETION,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: {
+        selectedSignals: true,
+        energyLevel: true,
+        curiosityLevel: true,
+        intimidationLevel: true,
+        exploration: { select: { title: true } },
+      },
+    }),
+    prisma.exploration.findMany({
+      where: { userId, status: ExplorationStatus.SKIPPED, skipReason: { not: null } },
+      orderBy: { skippedAt: "desc" },
+      take: 5,
+      select: { title: true, skipReason: true },
+    }),
+  ]);
+
+  const reflectionText = recentReflections
+    .map(
+      (r) =>
+        `- "${r.exploration.title}": signals=[${r.selectedSignals.join(", ")}], energy=${r.energyLevel}/5, curiosity=${r.curiosityLevel}/5, intimidation=${r.intimidationLevel}/5`
+    )
+    .join("\n") || "No reflections yet.";
+
+  const skipText = recentSkips
+    .map((s) => `- "${s.title}": "${s.skipReason}"`)
+    .join("\n") || "None.";
+
+  const prompt = CLARITY_OUTPUT_PROMPT
+    .replace("{summary}", insight.summary)
+    .replace("{directions}", insight.directions.join("\n"))
+    .replace("{tensions}", insight.tensions.join("\n"))
+    .replace("{reflections}", reflectionText)
+    .replace("{skipReasons}", skipText);
+
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  let data: ClarityOutputData;
+  try {
+    const res = await openai.responses.create({
+      model: "gpt-4.1-mini",
+      input: [{ role: "user", content: prompt }],
+    });
+    const raw = res.output_text.replace(/```(?:json)?\n?/g, "").trim();
+    data = JSON.parse(raw);
+  } catch {
+    return { ok: false };
+  }
+
+  await prisma.fitInsight.update({
+    where: { id: insight.id },
+    data: {
+      clarityOutput: JSON.stringify(data),
+      clarityUnlockedAt: insight.clarityOutput ? undefined : new Date(),
+      clarityInsightVersion: insight.version,
+    },
+  });
+
+  return { ok: true };
 }

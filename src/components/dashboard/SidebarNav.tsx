@@ -28,6 +28,16 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    label: "Clarity Output",
+    href: "/dashboard/clarity",
+    match: (p: string) => p === "/dashboard/clarity",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+        <path d="M2 4.5h11M2 7.5h8M2 10.5h5" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" />
+      </svg>
+    ),
+  },
 ];
 
 export default function SidebarNav() {
