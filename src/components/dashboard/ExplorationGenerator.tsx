@@ -12,9 +12,9 @@ export default function ExplorationGenerator() {
     if (triggered.current) return;
     triggered.current = true;
 
-    triggerNextExploration().then(() => {
-      router.refresh();
-    });
+    triggerNextExploration()
+      .then(() => { router.refresh(); })
+      .catch(() => {});
   }, [router]);
 
   return null;

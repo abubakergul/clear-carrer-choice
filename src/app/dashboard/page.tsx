@@ -13,10 +13,14 @@ export default async function DashboardPage() {
   if (!session?.user?.id) redirect("/sign-in");
   const userId = session.user.id;
 
-  const insight = await prisma.fitInsight.findUnique({
-    where: { userId },
-    select: { id: true, summary: true },
-  });
+  // Run insight check and expiry marking in parallel — saves one sequential round trip
+  const [insight] = await Promise.all([
+    prisma.fitInsight.findUnique({
+      where: { userId },
+      select: { id: true, summary: true },
+    }),
+    markExpiredExplorations(userId),
+  ]);
 
   // No insight → show empty state inside the dashboard shell
   if (!insight) {
@@ -36,8 +40,6 @@ export default async function DashboardPage() {
       </div>
     );
   }
-
-  await markExpiredExplorations(userId);
 
   const [activeExploration, pastExplorations] = await Promise.all([
     prisma.exploration.findFirst({
