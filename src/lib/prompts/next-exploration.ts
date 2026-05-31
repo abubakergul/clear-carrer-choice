@@ -51,7 +51,7 @@ Return ONLY valid JSON, no markdown, no explanation:
   "generationContext": {
     "basedOnSignals": ["signal1"],
     "basedOnTensions": ["tension1"],
-    "reason": "One sentence explaining why this exploration was chosen."
+    "reason": "One sentence citing a specific signal from a recent reflection. Must reference the actual signal name and exploration it appeared in. Examples: 'You felt Curious and Energized in your last creative exploration — this goes a step further in that direction.' OR 'You skipped the last structured task — this explores a similar theme from a much safer, observation-only angle.' Never write a generic reason like 'Based on your interests' or 'Aligned with your directions'."
   }
 }
 

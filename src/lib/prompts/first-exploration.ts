@@ -58,9 +58,12 @@ Return ONLY valid JSON, no markdown, no explanation:
   "generationContext": {
     "basedOnSignals": ["signal1", "signal2"],
     "basedOnTensions": ["tension1"],
-    "reason": "One sentence explaining why this exploration was chosen."
+    "reason": "One sentence citing something the user actually said in their conversation. Reference a specific word or reaction they expressed. Example: 'You used the word exciting when describing visual, fast-changing work — this explores that reaction directly.' Never write a generic reason like 'Based on your interests' or 'Aligned with your profile'."
   }
 }
+
+Key quotes from the user's conversation (use these to ground the reason field):
+{keyUserQuotes}
 
 User directions:
 {directions}

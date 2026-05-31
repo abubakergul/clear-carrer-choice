@@ -36,10 +36,13 @@ Write a Clarity Output as valid JSON matching this exact shape:
 }
 
 ### Section: observations (3–5 items)
-Each is a single sentence. Reference actual signal patterns by name (e.g. "Curious", "Resistant", "Energized"). Observational only — never evaluative.
-- Good: "You consistently feel curious and energized when exploring creative, visually-oriented environments."
-- Bad: "You are a creative person." (label)
+Each is a single sentence. You MUST name specific signals and their counts from the reflection data — do not write a single observation without citing the signal evidence behind it.
+- Good: "In 6 of your 8 completed explorations, you selected Curious and Energized — both appeared most often in creative, visually-oriented contexts."
+- Good: "You selected Resistant or Overwhelmed in 3 of 4 structured explorations, suggesting high-structure environments create friction for you."
+- Bad: "You consistently feel curious." (no count, no context)
+- Bad: "You are a creative person." (label, no evidence)
 - Bad: "You scored high on curiosity." (score language)
+Observational only — never evaluative.
 
 ### Section: uncertainties (1–2 items)
 Honest acknowledgement of what the data cannot yet confirm. This builds trust — the system is not flattering, it's honest.

@@ -1,16 +1,32 @@
-# Current Feature
+# Current Feature: Prompt Grounding
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Add goals here -->
+- Every AI output visibly references what the user actually said or did — not generic observations
+- FitInsight `summary` written in first-person observational tone quoting user language (e.g. "You described feeling 'alive' when...")
+- FitInsight `directions` are explanatory sentences with a "because", not bare labels
+- FitInsight `tensions` include what came up and why (unprompted, repeated, etc.)
+- First exploration `generationContext.reason` cites a direct quote or reaction from the conversation
+- Subsequent exploration `generationContext.reason` cites a specific signal from recent reflections, never "Based on your interests"
+- Evolved FitInsight directions reference specific signal patterns and counts
+- Clarity Output observations name signal counts (e.g. "In 6 of 8 explorations you selected Curious")
 
 ## Notes
 
-<!-- Add notes here -->
+- **Prompt-only task** — no new pages, no schema changes, no new UI, no export name changes, no JSON shape changes
+- **Prompts to update (in order):**
+  1. `src/lib/prompts/insight.ts` — highest impact, first thing every user sees
+  2. `src/lib/prompts/next-exploration.ts` — `generationContext.reason` grounding
+  3. `src/lib/prompts/first-exploration.ts` — pass `keyUserQuotes` into prompt
+  4. `src/lib/prompts/insight-evolution.ts` — reference specific signal patterns
+  5. `src/lib/prompts/clarity-output.ts` — cite signal names and counts
+- **Key helper needed:** Extract 2–3 emotionally expressive user messages from conversation (containing words like "love", "hate", "excited", "scared", "boring", "alive", "interesting", "terrifying") and pass as `keyUserQuotes` — used in `insight.ts` and `first-exploration.ts` via `claimAndGenerate()` in `src/actions/conversation.ts`
+- **Grounding rules to embed in every prompt:** (1) Quote/paraphrase user's actual words, (2) Reference signals by name, (3) Acknowledge source of observation, (4) Never generate a label without a reason
+- **Test:** If you swapped the user's name for another person's and the output still made sense — it's not grounded enough
 
 ## History
 

@@ -7,6 +7,25 @@ import { INSIGHT_PROMPT } from "@/lib/prompts/insight";
 import { FIRST_EXPLORATION_PROMPT } from "@/lib/prompts/first-exploration";
 import { ExplorationStatus, ExplorationType, ExplorationIntensity } from "@/generated/prisma/client";
 
+const EMOTIONAL_WORDS = [
+  "love", "hate", "excited", "excitement", "scared", "fear", "boring", "bored",
+  "alive", "interesting", "terrifying", "terrified", "fun", "dread", "passionate",
+  "obsessed", "miserable", "amazing", "awful", "enjoy", "enjoyed", "dislike",
+  "worried", "nervous", "thrilled", "dull", "exhausting", "energizing",
+  "fascinating", "frustrating", "overwhelmed", "curious",
+];
+
+function extractKeyUserQuotes(messages: { role: string; content: string }[]): string {
+  const userMessages = messages.filter((m) => m.role === "user");
+  const emotional = userMessages.filter((m) => {
+    const lower = m.content.toLowerCase();
+    return EMOTIONAL_WORDS.some((w) => lower.includes(w));
+  });
+  const picks = emotional.length >= 2 ? emotional.slice(0, 3) : userMessages.slice(0, 3);
+  if (picks.length === 0) return "(no direct quotes available)";
+  return picks.map((m) => `- "${m.content}"`).join("\n");
+}
+
 export async function saveMessages(
   conversationId: string,
   userContent: string,
@@ -66,7 +85,10 @@ export async function claimAndGenerate(
   const formatted = messages
     .map((m) => `${m.role}: ${m.content}`)
     .join("\n");
-  const insightPrompt = INSIGHT_PROMPT.replace("{messages}", formatted);
+  const keyUserQuotes = extractKeyUserQuotes(messages);
+  const insightPrompt = INSIGHT_PROMPT
+    .replace("{keyUserQuotes}", keyUserQuotes)
+    .replace("{messages}", formatted);
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -105,6 +127,7 @@ export async function claimAndGenerate(
 
   // Generate first Exploration
   const explorationPrompt = FIRST_EXPLORATION_PROMPT
+    .replace("{keyUserQuotes}", keyUserQuotes)
     .replace("{directions}", insightData.directions.join("\n"))
     .replace("{tensions}", insightData.tensions.join("\n"));
 
