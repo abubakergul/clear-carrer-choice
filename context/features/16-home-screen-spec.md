@@ -37,13 +37,6 @@ Protected route. This IS the home screen — no separate `/home` route needed.
 
 ---
 
-# What's Already Built
-
-- Active exploration hero card (dark, with type/intensity badges, generationContext reason) ✅
-- "Generating…" empty state while ExplorationGenerator runs ✅
-- Journey timeline with title, status, date ✅
-- `/dashboard/pattern` — My Pattern page with FitInsight + last 3 completions ✅
-- generationContext reason shown on active card and detail page ✅
 
 ---
 
@@ -77,7 +70,7 @@ Each COMPLETED entry in the journey timeline shows up to 3 signal chips from the
 
 ## 3 — Synthesis milestone banner
 
-After the user has 5+ COMPLETED explorations, show a banner above the active card:
+After the user has 3+ COMPLETED explorations, show a banner above the active card:
 
 > "A pattern is forming. See what we've noticed about you →"
 

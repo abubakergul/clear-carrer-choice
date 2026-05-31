@@ -56,7 +56,7 @@ export default async function ExplorationDetailPage({
     : "15";
 
   return (
-    <div className="mx-auto max-w-xl px-6 py-10">
+    <div className="min-h-full px-10 py-9">
       {/* Back */}
       <Link
         href="/dashboard"
@@ -130,7 +130,7 @@ export default async function ExplorationDetailPage({
         <>
           <Link
             href={`/dashboard/explore/${exploration.id}/reflect`}
-            className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-stone-800"
+            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98]"
           >
             I did it — reflect →
           </Link>

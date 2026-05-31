@@ -23,7 +23,7 @@ export default async function ReflectionPage({
   if (!exploration) notFound();
 
   return (
-    <div className="mx-auto max-w-xl px-6 py-10">
+    <div className="min-h-full px-10 py-9">
       {/* Back */}
       <Link
         href={`/dashboard/explore/${exploration.id}`}

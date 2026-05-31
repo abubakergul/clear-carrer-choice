@@ -14,8 +14,8 @@ const SIGNALS = [
   "Bored",
   "Confused",
   "Resistant",
-  "Creative",
-  "Structured",
+  "Inspired",
+  "Focused",
 ];
 
 type ScaleProps = {
@@ -130,7 +130,7 @@ export default function ReflectionForm({ explorationId }: { explorationId: strin
       <button
         type="submit"
         disabled={!canSubmit || pending}
-        className="rounded-xl bg-stone-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:opacity-40"
+        className="rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-40 active:scale-[0.98]"
       >
         {pending ? "Saving reflection…" : "Save reflection →"}
       </button>

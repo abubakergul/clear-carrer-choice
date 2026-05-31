@@ -1,16 +1,26 @@
-# Current Feature
+# Current Feature: Home Screen
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Add goals here -->
+- Add a **Current Direction strip** — a single violet-tinted sentence from `FitInsight.summary` above the timeline, linking to `/dashboard/pattern`
+- Add **signal chips on timeline entries** — up to 3 chips on COMPLETED explorations, nothing extra on SKIPPED/EXPIRED
+- Add a **synthesis milestone banner** — shown after sufficient completed explorations, soft violet, links to `/dashboard/pattern`, suppressed via `sessionStorage` after first view
 
 ## Notes
 
-<!-- Add notes here -->
+- Only file to touch: `src/app/dashboard/page.tsx` — no new components needed
+- Fetch `FitInsight.summary` (currently only `id` is selected in the insight query)
+- Add `reflections: { take: 1, select: { selectedSignals: true } }` to the `pastExplorations` query
+- Completed count already available from `pastExplorations` — use it for the banner threshold
+- **Threshold inconsistency in spec**: overview section says "3+ COMPLETED explorations" but implementation notes say "Do not show if completedCount < 5" — needs resolution before implementation
+- Language rules: avoid task/mission/assignment/productivity/achievement/performance/score; prefer exploration/notice/curiosity/reflection/discover/drawn toward
+- Direction strip language: never say "You are a X" — say "You seem drawn toward…" / "You often react with curiosity to…"
+- Visual tone: calm, spacious, no gamification, no streaks, no percentages
+- Mobile-first: primary CTA must stay accessible, no horizontal scrolling
 
 ## History
 
