@@ -43,9 +43,9 @@ Clarity Output unlocks progressively:
 
 | Completions | State |
 |-------------|-------|
-| 0–3 | Not available |
-| 4–6 | Locked teaser on `/dashboard/pattern`: "Clarity Output unlocks after 7 explorations. You've completed N so far." |
-| 7+ | Full Clarity Output unlocked |
+| 0–2 | Not available |
+| 3–4 | Locked teaser on `/dashboard/pattern`: "Clarity Output unlocks after 7 explorations. You've completed N so far." |
+| 5+ | Full Clarity Output unlocked |
 
 COMPLETED explorations only. Skips and expirations do not count.
 
@@ -215,7 +215,7 @@ Prefer: noticed, pattern, drawn toward, reaction, curiosity, energy, environment
 **Before unlock (< 7 completions):**
 Show teaser on `/dashboard/pattern`:
 
-> "Clarity Output unlocks after 7 explorations. You've completed N so far."
+> "Clarity Output unlocks after 5 explorations. You've completed N so far."
 
 No progress bar — just a plain sentence.
 

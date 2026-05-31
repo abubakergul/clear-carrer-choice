@@ -13,23 +13,23 @@ Also generate a patternSummary — a single paragraph (2–3 sentences) describi
 Return ONLY valid JSON with this exact structure — no markdown, no explanation:
 
 {
-  "summary": "Updated 2-3 sentence summary. Keep close to the original unless there is strong evidence to update it.",
+  "summary": "Updated 2-3 sentence summary. Keep close to the original unless there is strong evidence to update it. If updating, reference the specific signal patterns that prompted the change.",
   "directions": [
-    "3-5 word direction label",
-    "3-5 word direction label"
+    "A full sentence describing a direction with a because, grounded in specific signal data. Reference signal names and how often they appeared. Example: 'You have now shown Curious and Energized signals in 3 of your last 4 creative explorations — environments built around creative variety seem to pull you consistently.'",
+    "A full sentence for another direction, citing specific signal evidence."
   ],
   "tensions": [
-    "One sentence describing a tension.",
-    "One sentence describing a tension."
+    "A full sentence describing a tension with its signal evidence. Example: 'You have shown Resistant or Overwhelmed signals in 3 of 4 structured explorations — the resistance to high-structure environments is strengthening across the data.'",
+    "A full sentence for another tension, citing signal evidence."
   ],
-  "patternSummary": "2-3 sentences observing recurring emotional patterns across their explorations. Reference actual signals (e.g. 'You consistently feel curious and energized in creative contexts, but resistant in highly structured solo work'). Never use the words: score, performance, productivity, achievement, success."
+  "patternSummary": "2-3 sentences observing recurring emotional patterns. Reference actual signal names and counts (e.g. 'In 4 of your last 6 explorations, you selected Curious and Energized — both appeared most in creative, open-ended contexts'). Never use the words: score, performance, productivity, achievement, success."
 }
 
 Rules:
-- directions must be SHORT labels — 3 to 5 words only
+- directions must be grounded sentences citing signal counts — not short labels
 - Evolve slowly: if only 1 reflection contradicts the pattern, do not change it
 - Never say "you should become X" or "you are a [personality type]"
-- patternSummary must reference real signal names from the data
+- patternSummary must reference real signal names and counts from the data
 - Maximum 3 directions, maximum 3 tensions
 - If fewer than 3 reflections show a clear pattern, make minimal changes
 
