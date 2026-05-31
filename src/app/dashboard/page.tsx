@@ -6,6 +6,7 @@ import { ExplorationStatus } from "@/generated/prisma/client";
 import { markExpiredExplorations } from "@/actions/exploration";
 import ExplorationGenerator from "@/components/dashboard/ExplorationGenerator";
 import CoolDownTimer from "@/components/dashboard/CoolDownTimer";
+import MilestoneBanner from "@/components/dashboard/MilestoneBanner";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -14,7 +15,7 @@ export default async function DashboardPage() {
 
   const insight = await prisma.fitInsight.findUnique({
     where: { userId },
-    select: { id: true },
+    select: { id: true, summary: true },
   });
 
   // No insight → show empty state inside the dashboard shell
@@ -116,13 +117,24 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Pattern milestone banner ───────────────────── */}
-      {completedCount >= 3 && (
+      {completedCount >= 5 && <MilestoneBanner />}
+
+      {/* ── Current Direction strip ────────────────────── */}
+      {insight.summary && (
         <Link
           href="/dashboard/pattern"
-          className="mb-7 flex items-center justify-between rounded-2xl border border-violet-100 bg-violet-50 px-5 py-3.5 text-sm text-violet-800 transition hover:bg-violet-100"
+          className="mb-6 flex items-center gap-3 rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 transition-colors hover:bg-violet-100 group"
         >
-          <span>A pattern is forming — see what we&apos;ve noticed</span>
-          <span className="text-violet-400">→</span>
+          <svg width="16" height="16" viewBox="0 0 22 22" fill="none" aria-hidden="true" className="shrink-0 text-violet-400">
+            <circle cx="8"  cy="11" r="6" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="14" cy="11" r="6" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
+          </svg>
+          <p className="flex-1 line-clamp-1 text-[13px] leading-relaxed text-violet-700">
+            {insight.summary}
+          </p>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="shrink-0 text-violet-400 transition-transform group-hover:translate-x-0.5">
+            <path d="M2.5 7h9m-4-4 4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </Link>
       )}
 
