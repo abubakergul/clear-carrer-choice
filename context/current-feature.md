@@ -1,32 +1,16 @@
-# Current Feature: Prompt Grounding
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Every AI output visibly references what the user actually said or did — not generic observations
-- FitInsight `summary` written in first-person observational tone quoting user language (e.g. "You described feeling 'alive' when...")
-- FitInsight `directions` are explanatory sentences with a "because", not bare labels
-- FitInsight `tensions` include what came up and why (unprompted, repeated, etc.)
-- First exploration `generationContext.reason` cites a direct quote or reaction from the conversation
-- Subsequent exploration `generationContext.reason` cites a specific signal from recent reflections, never "Based on your interests"
-- Evolved FitInsight directions reference specific signal patterns and counts
-- Clarity Output observations name signal counts (e.g. "In 6 of 8 explorations you selected Curious")
+<!-- Add goals here -->
 
 ## Notes
 
-- **Prompt-only task** — no new pages, no schema changes, no new UI, no export name changes, no JSON shape changes
-- **Prompts to update (in order):**
-  1. `src/lib/prompts/insight.ts` — highest impact, first thing every user sees
-  2. `src/lib/prompts/next-exploration.ts` — `generationContext.reason` grounding
-  3. `src/lib/prompts/first-exploration.ts` — pass `keyUserQuotes` into prompt
-  4. `src/lib/prompts/insight-evolution.ts` — reference specific signal patterns
-  5. `src/lib/prompts/clarity-output.ts` — cite signal names and counts
-- **Key helper needed:** Extract 2–3 emotionally expressive user messages from conversation (containing words like "love", "hate", "excited", "scared", "boring", "alive", "interesting", "terrifying") and pass as `keyUserQuotes` — used in `insight.ts` and `first-exploration.ts` via `claimAndGenerate()` in `src/actions/conversation.ts`
-- **Grounding rules to embed in every prompt:** (1) Quote/paraphrase user's actual words, (2) Reference signals by name, (3) Acknowledge source of observation, (4) Never generate a label without a reason
-- **Test:** If you swapped the user's name for another person's and the output still made sense — it's not grounded enough
+<!-- Add notes here -->
 
 ## History
 
@@ -61,3 +45,5 @@ In Progress
 - **Home Screen** — Dashboard gains a Current Direction strip (violet pill showing `FitInsight.summary`, links to `/dashboard/pattern`) above "Up next". Milestone banner (`>=5` completions) uses `MilestoneBanner` client component with `sessionStorage` suppression (shows once per session). Loading skeletons added for `/dashboard` and `/dashboard/pattern` (instant perceived navigation). Pattern page redesigned: "What draws you in" header, directions with hover-lift cards, signals shown contextually under each exploration title instead of decontextualized frequency bars — summary and duplicate sections removed. Explore and reflect pages switched to full-width layout (was narrow `max-w-xl` centered column). Black CTA buttons changed to violet throughout. Signal words updated: `Creative→Inspired`, `Structured→Focused`. Files: `src/app/dashboard/page.tsx`, `src/app/dashboard/loading.tsx`, `src/app/dashboard/pattern/page.tsx`, `src/app/dashboard/pattern/loading.tsx`, `src/app/dashboard/explore/[id]/page.tsx`, `src/app/dashboard/explore/[id]/reflect/page.tsx`, `src/components/dashboard/MilestoneBanner.tsx`, `src/components/dashboard/ReflectionForm.tsx`.
 
 - **Clarity Output** — `/dashboard/clarity` synthesizes accumulated signal data into a personal 4-section pattern report: What We Noticed (3–5 observational sentences tied to actual signals), What's Still Uncertain (1–2 honest gaps), Environments Worth Exploring (2–3 environment types with reasoning + one concrete action each), What To Do Next (2–3 gentle nudges). Progressive unlock: no access at 0–2 completions, plain teaser sentence on `/dashboard/pattern` at 3–4, violet CTA + full output at 5+. Generated on first visit (non-blocking; page shows loading dots, polls `router.refresh()` every 3s via `ClarityGenerator` client component). Cached in DB as JSON on `FitInsight.clarityOutput`; auto-regenerates when `FitInsight.version` advances past `clarityInsightVersion`. Schema adds `clarityOutput String?`, `clarityUnlockedAt DateTime?`, `clarityInsightVersion Int @default(0)` (migration `20260531100341_add_clarity_output`). "Clarity Output" nav item added to sidebar. Files: `src/app/dashboard/clarity/page.tsx`, `src/components/dashboard/ClarityGenerator.tsx`, `src/actions/exploration.ts`, `src/lib/prompts/clarity-output.ts`, `src/app/dashboard/pattern/page.tsx`, `src/components/dashboard/SidebarNav.tsx`, `prisma/schema.prisma`.
+
+- **Prompt Grounding** — Prompt-only infrastructure pass to make every AI output feel personal. `insight.ts`: directions are now full explanatory sentences with a "because" (not 3–5 word labels), summary must quote user's exact words, tensions must state what prompted them; added `{keyUserQuotes}` section. `first-exploration.ts`: `generationContext.reason` must cite a specific word/reaction from the conversation; added `{keyUserQuotes}` placeholder. `next-exploration.ts`: `reason` must name the actual signal and exploration it came from — generic reasons explicitly forbidden. `insight-evolution.ts`: evolved directions must cite signal counts (e.g. "3 of 4 explorations showed Resistant"), patternSummary must reference signal names and counts. `clarity-output.ts`: observations must include signal name + count with inline good/bad examples. `conversation.ts`: added `extractKeyUserQuotes()` helper that picks up to 3 user messages containing emotional language (love, hate, excited, scared, alive, etc.) and passes them as `{keyUserQuotes}` into insight and first-exploration prompts. Files: `src/lib/prompts/insight.ts`, `src/lib/prompts/first-exploration.ts`, `src/lib/prompts/next-exploration.ts`, `src/lib/prompts/insight-evolution.ts`, `src/lib/prompts/clarity-output.ts`, `src/actions/conversation.ts`.
