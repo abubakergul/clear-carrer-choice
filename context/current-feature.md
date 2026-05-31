@@ -1,28 +1,16 @@
-# Current Feature: Clarity Output
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Add `/dashboard/clarity` page that synthesizes accumulated signal data into a personal pattern report
-- Implement progressive unlock: no access at 0–2 completions, teaser on `/dashboard/pattern` at 3–4, full output at 5+ completed explorations
-- Page has 4 sections: What We Noticed (3–5 observations), What's Still Uncertain (1–2 honest gaps), Environments Worth Exploring (2–3 with one concrete action each), What To Do Next (2–3 light next steps)
-- Generate output on first visit (non-blocking, polling every 3s like ExplorationGenerator), cache in DB as JSON on `FitInsight.clarityOutput`
-- Regenerate automatically when `FitInsight.version` has advanced since clarity was last generated (tracked via `clarityInsightVersion`)
-- Language is strictly observational — no labels, scores, or prescriptive career titles
-- Add `clarityOutput String?`, `clarityUnlockedAt DateTime?`, `clarityInsightVersion Int @default(0)` to `FitInsight` in schema
+<!-- Add goals here -->
 
 ## Notes
 
-- **Unlock threshold confirmed: 5+ completed explorations.** Teaser shown at 3–4, full output at 5+. The "≥ 7" mention in the spec's generation flow section is a typo — ignore it.
-- Prompt receives: `FitInsight.summary`, `directions`, `tensions`, last 10 completed reflections (signals + energy/curiosity/intimidation levels), recent skip reasons
-- Prompt returns JSON: `{ observations, uncertainties, environments: [{ title, reasoning, action }], nextSteps }`
-- Prompt file: `src/lib/prompts/clarity-output.ts`
-- Link to this page from `/dashboard/pattern` once unlocked; back link from clarity page returns to pattern
-- No charts, percentages, or scores — clean spacious layout with violet accents
-- Key files: `src/app/dashboard/clarity/page.tsx`, `src/actions/exploration.ts` (add `generateClarityOutput`), `src/lib/prompts/clarity-output.ts`, `prisma/schema.prisma`
+<!-- Add notes here -->
 
 ## History
 
@@ -55,3 +43,5 @@ In Progress
 - **Reflection + Signal System** — ReflectionForm updated to 12-chip curated signal list (Curious, Energized, Calm, Excited, Engaged, Overwhelmed, Intimidated, Bored, Confused, Resistant, Creative, Structured). Completed exploration detail page shows full reflection data (signal chips, energy/curiosity/intimidation scores, notes). Dashboard timeline shows up to 3 signal chips on completed entries. Milestone banner appears at 3+ completions linking to `/dashboard/pattern`. FitInsight evolution fires every 3rd completion (fire-and-forget): fetches last 6 reflections, updates summary/directions/tensions/patternSummary, increments version. `patternSummary String?` added to FitInsight schema (migration `20260529134248_add_pattern_summary`). Pattern page redesigned: animated signal frequency bars (grow on load, staggered), pulsing rings SVG, staggered section fade-ins, hover-lift on direction/tension cards. Active exploration card redesigned to violet-50 (clean, calm). 12h cooldown countdown timer (violet) shown after 3 consecutive skips; disengaged state (soft exit to pattern page) shown after skipping through a cooldown. SkipDialog shows amber notice at 2+ consecutive skips. Explore route loading skeleton added. Files: `src/components/dashboard/ReflectionForm.tsx`, `src/app/dashboard/explore/[id]/page.tsx`, `src/app/dashboard/explore/[id]/loading.tsx`, `src/app/dashboard/page.tsx`, `src/app/dashboard/pattern/page.tsx`, `src/actions/exploration.ts`, `src/lib/prompts/insight-evolution.ts`, `src/components/dashboard/CoolDownTimer.tsx`, `src/components/dashboard/SkipDialog.tsx`, `prisma/schema.prisma`.
 
 - **Home Screen** — Dashboard gains a Current Direction strip (violet pill showing `FitInsight.summary`, links to `/dashboard/pattern`) above "Up next". Milestone banner (`>=5` completions) uses `MilestoneBanner` client component with `sessionStorage` suppression (shows once per session). Loading skeletons added for `/dashboard` and `/dashboard/pattern` (instant perceived navigation). Pattern page redesigned: "What draws you in" header, directions with hover-lift cards, signals shown contextually under each exploration title instead of decontextualized frequency bars — summary and duplicate sections removed. Explore and reflect pages switched to full-width layout (was narrow `max-w-xl` centered column). Black CTA buttons changed to violet throughout. Signal words updated: `Creative→Inspired`, `Structured→Focused`. Files: `src/app/dashboard/page.tsx`, `src/app/dashboard/loading.tsx`, `src/app/dashboard/pattern/page.tsx`, `src/app/dashboard/pattern/loading.tsx`, `src/app/dashboard/explore/[id]/page.tsx`, `src/app/dashboard/explore/[id]/reflect/page.tsx`, `src/components/dashboard/MilestoneBanner.tsx`, `src/components/dashboard/ReflectionForm.tsx`.
+
+- **Clarity Output** — `/dashboard/clarity` synthesizes accumulated signal data into a personal 4-section pattern report: What We Noticed (3–5 observational sentences tied to actual signals), What's Still Uncertain (1–2 honest gaps), Environments Worth Exploring (2–3 environment types with reasoning + one concrete action each), What To Do Next (2–3 gentle nudges). Progressive unlock: no access at 0–2 completions, plain teaser sentence on `/dashboard/pattern` at 3–4, violet CTA + full output at 5+. Generated on first visit (non-blocking; page shows loading dots, polls `router.refresh()` every 3s via `ClarityGenerator` client component). Cached in DB as JSON on `FitInsight.clarityOutput`; auto-regenerates when `FitInsight.version` advances past `clarityInsightVersion`. Schema adds `clarityOutput String?`, `clarityUnlockedAt DateTime?`, `clarityInsightVersion Int @default(0)` (migration `20260531100341_add_clarity_output`). "Clarity Output" nav item added to sidebar. Files: `src/app/dashboard/clarity/page.tsx`, `src/components/dashboard/ClarityGenerator.tsx`, `src/actions/exploration.ts`, `src/lib/prompts/clarity-output.ts`, `src/app/dashboard/pattern/page.tsx`, `src/components/dashboard/SidebarNav.tsx`, `prisma/schema.prisma`.
