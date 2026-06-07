@@ -2,7 +2,23 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ExplorationStatus } from "@/generated/prisma/client";
+import { ExplorationStatus, ReflectionSource } from "@/generated/prisma/client";
+import { computeStanding, buildVerdict, type StandingItem } from "@/lib/options";
+import OptionsStanding from "@/components/dashboard/OptionsStanding";
+import ClarityGenerator from "@/components/dashboard/ClarityGenerator";
+
+type ClarityOutputData = {
+  observations: string[];
+  uncertainties: string[];
+  environments: { title: string; reasoning: string; action: string }[];
+  nextSteps: string[];
+};
+
+function storedOption(ctx: unknown): string | null {
+  if (!ctx || typeof ctx !== "object") return null;
+  const o = (ctx as Record<string, unknown>).option;
+  return typeof o === "string" && o.trim() ? o.trim() : null;
+}
 
 export default async function PatternPage() {
   const session = await auth();
@@ -32,11 +48,21 @@ export default async function PatternPage() {
     prisma.exploration.findMany({
       where: { userId, status: ExplorationStatus.COMPLETED },
       orderBy: { completedAt: "desc" },
-      take: 5,
-      include: {
+      take: 10,
+      select: {
+        id: true,
+        title: true,
+        generationContext: true,
         reflections: {
+          where: { source: ReflectionSource.COMPLETION },
           take: 1,
-          select: { selectedSignals: true },
+          orderBy: { createdAt: "desc" },
+          select: {
+            selectedSignals: true,
+            curiosityLevel: true,
+            energyLevel: true,
+            intimidationLevel: true,
+          },
         },
       },
     }),
@@ -47,23 +73,103 @@ export default async function PatternPage() {
     (e) => (e.reflections[0]?.selectedSignals?.length ?? 0) > 0
   );
 
+  // Where each option the user is weighing currently stands.
+  const standingItems: StandingItem[] = explorations.map((e) => {
+    const r = e.reflections[0];
+    return {
+      option: storedOption(e.generationContext),
+      title: e.title,
+      signals: r?.selectedSignals ?? [],
+      curiosity: r?.curiosityLevel ?? null,
+      energy: r?.energyLevel ?? null,
+      intimidation: r?.intimidationLevel ?? null,
+    };
+  });
+  const standings =
+    insight.options.length > 0 ? computeStanding(insight.options, standingItems) : [];
+
+  // The "answer" unlocks at 5 completed explorations.
+  const unlocked = totalCompleted >= 5;
+  const verdict = unlocked && standings.length > 0 ? buildVerdict(standings) : null;
+
+  // "What to do next" comes from the cached clarity output; regenerate in the
+  // background when it's missing or the insight has evolved past it.
+  const needsClarity =
+    unlocked && (!insight.clarityOutput || insight.clarityInsightVersion < insight.version);
+  let nextSteps: string[] = [];
+  if (unlocked && insight.clarityOutput) {
+    try {
+      nextSteps = (JSON.parse(insight.clarityOutput) as ClarityOutputData).nextSteps ?? [];
+    } catch {
+      nextSteps = [];
+    }
+  }
+
   return (
-    <div className="min-h-full px-10 py-9">
+    <div className="mx-auto min-h-full max-w-2xl px-6 py-9 sm:px-8">
+      {needsClarity && <ClarityGenerator />}
 
       {/* ── Header ──────────────────────────────────────── */}
-      <div className="mb-10">
+      <div className="mb-8">
         <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1">
           <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-violet-500" />
           <span className="text-[10px] font-semibold uppercase tracking-widest text-violet-600">
-            Your pattern · v{insight.version}
+            {unlocked ? "Where you’ve landed" : "Your pattern"}
           </span>
         </div>
-        <h1 className="text-[26px] font-bold tracking-tight text-stone-900">What draws you in</h1>
-        <p className="mt-1 text-sm text-stone-400">
+        <h1 className="text-[26px] font-bold leading-snug tracking-tight text-stone-900">
+          {verdict ?? "What draws you in"}
+        </h1>
+        <p className="mt-1.5 text-sm text-stone-400">
           Built from your conversation
           {totalCompleted > 0 && ` · shaped by ${totalCompleted} exploration${totalCompleted !== 1 ? "s" : ""}`}.
         </p>
       </div>
+
+      {/* ── Where your options stand ─────────────────────── */}
+      {standings.length > 0 && (
+        <section className="mb-9 rounded-2xl border border-stone-100 bg-white px-6 py-6 shadow-sm">
+          <p className="mb-4 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+            Where your options stand
+          </p>
+          <OptionsStanding standings={standings} />
+        </section>
+      )}
+
+      {/* ── What to do next (unlocked at 5) ──────────────── */}
+      {unlocked && (
+        <section className="mb-9">
+          <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-stone-300">
+            What to do next
+          </p>
+          {nextSteps.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {nextSteps.map((step, i) => (
+                <div
+                  key={i}
+                  className="flex items-start gap-3 rounded-xl border border-stone-100 bg-white px-5 py-3.5 shadow-sm"
+                >
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
+                  <p className="text-sm leading-relaxed text-stone-700">{step}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 rounded-xl border border-stone-100 bg-white px-5 py-4 shadow-sm">
+              <div className="flex gap-1.5">
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="h-2 w-2 animate-pulse rounded-full bg-violet-300"
+                    style={{ animationDelay: `${i * 0.2}s` }}
+                  />
+                ))}
+              </div>
+              <p className="text-sm text-stone-400">Working out your next steps…</p>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* ── Directions ───────────────────────────────────── */}
       <section className="mb-8">
@@ -74,7 +180,7 @@ export default async function PatternPage() {
           {insight.directions.map((d, i) => (
             <div
               key={i}
-              className="flex items-center gap-4 rounded-xl border border-stone-100 bg-white px-5 py-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+              className="flex items-center gap-4 rounded-xl border border-stone-100 bg-white px-5 py-4 shadow-sm"
             >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-600">
                 {i + 1}
@@ -131,39 +237,18 @@ export default async function PatternPage() {
         </section>
       )}
 
-      {/* ── Clarity Output CTA ───────────────────────────── */}
-      {totalCompleted >= 5 ? (
-        <div className="mt-8 rounded-xl border border-violet-200 bg-violet-50 px-5 py-4">
-          <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-widest text-violet-500">
-            Ready
-          </p>
-          <p className="mb-3 text-sm font-medium text-violet-900">
-            Your Clarity Output is available.
-          </p>
-          <Link
-            href="/dashboard/clarity"
-            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-violet-700"
-          >
-            View Clarity Output
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <path d="M4.5 2L8.5 6l-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </Link>
-        </div>
-      ) : totalCompleted >= 3 ? (
+      {/* ── Pre-unlock teaser ────────────────────────────── */}
+      {!unlocked && totalCompleted >= 3 && (
         <div className="mt-8 rounded-xl border border-stone-100 bg-stone-50 px-5 py-4">
           <p className="text-sm text-stone-500">
-            Clarity Output unlocks after 5 explorations. You&apos;ve completed {totalCompleted} so far.
+            Your answer unlocks after 5 explorations. You&apos;ve completed {totalCompleted} so far.
           </p>
         </div>
-      ) : null}
+      )}
 
       {/* ── Disclaimer ───────────────────────────────────── */}
       <p className="mt-4 text-xs text-stone-400">
-        A starting point, not a verdict. Speak with a counselor if you&apos;re feeling stuck.{" "}
-        <Link href="/result" className="underline-offset-2 hover:text-stone-600 hover:underline">
-          See original reveal →
-        </Link>
+        This mirrors how you&apos;ve reacted — not a verdict on what&apos;s right. Speak with a counselor if you&apos;re feeling stuck.
       </p>
     </div>
   );

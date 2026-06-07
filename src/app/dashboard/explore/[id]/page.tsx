@@ -4,11 +4,54 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { ExplorationStatus } from "@/generated/prisma/client";
 import SkipDialog from "@/components/dashboard/SkipDialog";
+import ThisOrThat from "@/components/dashboard/ThisOrThat";
+import RealDay from "@/components/dashboard/RealDay";
+
+type DayChunk = { percent: number; text: string };
+
+// A "real day" exploration: the honest, un-glamorized hour-by-hour breakdown of
+// one specific role, which the user rates part by part — in-app.
+function realDay(
+  ctx: unknown
+): { role: string; chunks: DayChunk[]; closer?: string } | null {
+  if (!ctx || typeof ctx !== "object") return null;
+  const it = (ctx as Record<string, unknown>).interaction;
+  if (!it || typeof it !== "object") return null;
+  const o = it as Record<string, unknown>;
+  if (o.kind !== "real_day") return null;
+
+  const role = typeof o.role === "string" ? o.role.trim() : "";
+  const rawChunks = Array.isArray(o.chunks) ? o.chunks : [];
+  const chunks: DayChunk[] = rawChunks
+    .map((c): DayChunk | null => {
+      if (!c || typeof c !== "object") return null;
+      const cc = c as Record<string, unknown>;
+      const percent = Number(cc.percent);
+      const text = typeof cc.text === "string" ? cc.text.trim() : "";
+      return text && Number.isFinite(percent) ? { percent, text } : null;
+    })
+    .filter((x): x is DayChunk => x !== null);
+  const closer = typeof o.closer === "string" ? o.closer.trim() : undefined;
+
+  return role && chunks.length >= 2 ? { role, chunks, closer } : null;
+}
 
 function genReason(ctx: unknown): string | null {
   if (!ctx || typeof ctx !== "object") return null;
   const r = (ctx as Record<string, unknown>).reason;
   return typeof r === "string" && r.trim() ? r.trim() : null;
+}
+
+// A "this-or-that" exploration carries two scenes the user taps between, in-app.
+function thisOrThat(ctx: unknown): { optionA: string; optionB: string } | null {
+  if (!ctx || typeof ctx !== "object") return null;
+  const it = (ctx as Record<string, unknown>).interaction;
+  if (!it || typeof it !== "object") return null;
+  const o = it as Record<string, unknown>;
+  if (o.kind !== "this_or_that") return null;
+  const a = typeof o.optionA === "string" ? o.optionA.trim() : "";
+  const b = typeof o.optionB === "string" ? o.optionB.trim() : "";
+  return a && b ? { optionA: a, optionB: b } : null;
 }
 
 export default async function ExplorationDetailPage({
@@ -55,8 +98,14 @@ export default async function ExplorationDetailPage({
     ? "10"
     : "15";
 
+  // Interactive explorations carry their own guidance, so we hide the generic
+  // "What to notice" box for them.
+  const tot = thisOrThat(exploration.generationContext);
+  const rd = realDay(exploration.generationContext);
+  const interactive = !!(tot || rd);
+
   return (
-    <div className="min-h-full px-10 py-9">
+    <div className="mx-auto min-h-full max-w-2xl px-6 py-9 sm:px-8">
       {/* Back */}
       <Link
         href="/dashboard"
@@ -101,44 +150,60 @@ export default async function ExplorationDetailPage({
         </p>
       )}
 
-      {/* What to notice */}
-      <div className="mb-8 rounded-2xl border border-violet-100 bg-violet-50 px-5 py-4">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-violet-500">
-          What to notice
-        </p>
-        <ul className="flex flex-col gap-2 text-sm text-stone-600">
-          <li className="flex items-start gap-2">
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
-            Do you feel curious and want to keep going?
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
-            Do you feel intimidated or resistant?
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
-            Does your energy go up or down?
-          </li>
-        </ul>
-        <p className="mt-3 text-xs text-stone-400">
-          No right answer. Your reaction is the data.
-        </p>
-      </div>
+      {/* What to notice — only for plain explorations; interactive ones guide themselves */}
+      {isActive && !interactive && (
+        <div className="mb-8 rounded-2xl border border-violet-100 bg-violet-50 px-5 py-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-violet-500">
+            What to notice
+          </p>
+          <ul className="flex flex-col gap-2 text-sm text-stone-600">
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
+              Do you want to keep going, or stop?
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
+              Does it feel good, or does it stress you out?
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" />
+              Does your energy go up or down?
+            </li>
+          </ul>
+        </div>
+      )}
 
       {/* CTA */}
-      {isActive && (
-        <>
-          <Link
-            href={`/dashboard/explore/${exploration.id}/reflect`}
-            className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98]"
-          >
-            I did it — reflect →
-          </Link>
-          <div className="mt-4">
-            <SkipDialog explorationId={exploration.id} consecutiveSkips={consecutiveSkips} />
-          </div>
-        </>
-      )}
+      {isActive && (() => {
+        return (
+          <>
+            {rd ? (
+              <RealDay
+                explorationId={exploration.id}
+                role={rd.role}
+                chunks={rd.chunks}
+                closer={rd.closer}
+              />
+            ) : tot ? (
+              <ThisOrThat
+                explorationId={exploration.id}
+                optionA={tot.optionA}
+                optionB={tot.optionB}
+              />
+            ) : (
+              <Link
+                href={`/dashboard/explore/${exploration.id}/reflect`}
+                className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98]"
+              >
+                I did it — reflect →
+              </Link>
+            )}
+            <div className="mt-4">
+              <SkipDialog explorationId={exploration.id} consecutiveSkips={consecutiveSkips} />
+            </div>
+          </>
+        );
+      })()}
 
       {isCompleted && (() => {
         const reflection = exploration.reflections[0];
@@ -163,22 +228,6 @@ export default async function ExplorationDetailPage({
                   {s}
                 </span>
               ))}
-            </div>
-
-            {/* Scores */}
-            <div className="flex gap-6 text-sm text-stone-600">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-stone-400">Energy</span>
-                <span className="font-semibold text-stone-800">{reflection.energyLevel}/5</span>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-stone-400">Curiosity</span>
-                <span className="font-semibold text-stone-800">{reflection.curiosityLevel}/5</span>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <span className="text-xs text-stone-400">Intimidation</span>
-                <span className="font-semibold text-stone-800">{reflection.intimidationLevel}/5</span>
-              </div>
             </div>
 
             {/* Notes */}

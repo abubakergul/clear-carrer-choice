@@ -13,23 +13,23 @@ Also generate a patternSummary — a single paragraph (2–3 sentences) describi
 Return ONLY valid JSON with this exact structure — no markdown, no explanation:
 
 {
-  "summary": "Updated 2-3 sentence summary. Keep close to the original unless there is strong evidence to update it. If updating, reference the specific signal patterns that prompted the change.",
+  "summary": "Updated 2-3 sentence summary. Keep close to the original unless there is strong evidence to update it.",
   "directions": [
-    "A full sentence describing a direction with a because, grounded in specific signal data. Reference signal names and how often they appeared. Example: 'You have now shown Curious and Energized signals in 3 of your last 4 creative explorations — environments built around creative variety seem to pull you consistently.'",
-    "A full sentence for another direction, citing specific signal evidence."
+    "A full, HUMAN sentence describing a direction and why — grounded in how they actually reacted, but written like a thoughtful friend, not a data report. Good: 'Every time the work was hands-on and creative, you leaned in and wanted more.' BAD: 'Curious signals appeared in 3 of 4 reflections.'",
+    "Another direction sentence in the same human voice."
   ],
   "tensions": [
-    "A full sentence describing a tension with its signal evidence. Example: 'You have shown Resistant or Overwhelmed signals in 3 of 4 structured explorations — the resistance to high-structure environments is strengthening across the data.'",
-    "A full sentence for another tension, citing signal evidence."
+    "A full HUMAN sentence describing a tension and what keeps showing it. Good: 'Whenever the work turned rule-heavy and rigid, you pulled back — it kept happening, not just once.' BAD: 'Resistant signals in 3 of 4 structured explorations.'",
+    "Another tension sentence in the same human voice."
   ],
-  "patternSummary": "2-3 sentences observing recurring emotional patterns. Reference actual signal names and counts (e.g. 'In 4 of your last 6 explorations, you selected Curious and Energized — both appeared most in creative, open-ended contexts'). Never use the words: score, performance, productivity, achievement, success."
+  "patternSummary": "2-3 plain-language sentences on what this person keeps noticing about themselves across their explorations. Written warmly, like a person who's been paying attention — not an analyst."
 }
 
 Rules:
-- directions must be grounded sentences citing signal counts — not short labels
+- WRITE LIKE A HUMAN, NOT A DASHBOARD. Never put rating numbers (e.g. "4/5") or clinical counts (e.g. "in 3 of 4 reflections", "intimidation level") in the text. Say what it MEANS in plain words: "kept", "again and again", "every time", "more often than not".
+- LANGUAGE: simple, everyday English a 16-year-old understands. Short sentences, no jargon.
 - Evolve slowly: if only 1 reflection contradicts the pattern, do not change it
 - Never say "you should become X" or "you are a [personality type]"
-- patternSummary must reference real signal names and counts from the data
 - Maximum 3 directions, maximum 3 tensions
 - If fewer than 3 reflections show a clear pattern, make minimal changes
 

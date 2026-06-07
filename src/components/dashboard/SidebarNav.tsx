@@ -20,21 +20,11 @@ const NAV = [
   {
     label: "My Pattern",
     href: "/dashboard/pattern",
-    match: (p: string) => p === "/dashboard/pattern",
+    match: (p: string) => p === "/dashboard/pattern" || p === "/dashboard/clarity",
     icon: (
       <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
         <circle cx="5.5" cy="7.5" r="4" stroke="currentColor" strokeWidth="1.15" />
         <circle cx="9.5" cy="7.5" r="4" stroke="currentColor" strokeWidth="1.15" opacity="0.45" />
-      </svg>
-    ),
-  },
-  {
-    label: "Clarity Output",
-    href: "/dashboard/clarity",
-    match: (p: string) => p === "/dashboard/clarity",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-        <path d="M2 4.5h11M2 7.5h8M2 10.5h5" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round" />
       </svg>
     ),
   },

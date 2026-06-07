@@ -3,56 +3,37 @@
 import { useState, useTransition } from "react";
 import { completeExploration } from "@/actions/exploration";
 
-const SIGNALS = [
-  "Curious",
-  "Energized",
-  "Calm",
+// Plain-English feelings. No "intimidated" / "resistant" — words a stressed
+// student shouldn't have to look up.
+const FEELINGS = [
   "Excited",
-  "Engaged",
-  "Overwhelmed",
-  "Intimidated",
+  "Curious",
+  "Enjoyed it",
+  "Calm",
   "Bored",
   "Confused",
-  "Resistant",
-  "Inspired",
-  "Focused",
+  "Stressed",
+  "Not for me",
 ];
 
-type ScaleProps = {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-};
-
-function Scale({ label, value, onChange }: ScaleProps) {
-  return (
-    <div>
-      <p className="mb-2 text-sm font-medium text-stone-700">{label}</p>
-      <div className="flex gap-2">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => onChange(n)}
-            className={`h-9 w-9 rounded-xl text-sm font-semibold transition ${
-              value === n
-                ? "bg-violet-600 text-white"
-                : "bg-stone-100 text-stone-500 hover:bg-stone-200"
-            }`}
-          >
-            {n}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
+// The numeric levels still feed insight evolution + clarity, so we derive them
+// from the taps instead of asking the user to rate three separate 1–5 scales.
+function deriveLevels(signals: string[]) {
+  const has = (s: string) => signals.includes(s);
+  const curiosity = has("Curious") || has("Excited") ? 5 : has("Enjoyed it") ? 4 : has("Bored") || has("Not for me") ? 2 : 3;
+  const energy = has("Excited") || has("Enjoyed it") ? 5 : has("Curious") ? 4 : has("Bored") || has("Stressed") ? 2 : 3;
+  const intimidation = has("Stressed") ? 4 : has("Confused") ? 3 : 1;
+  return { energy, curiosity, intimidation };
 }
 
-export default function ReflectionForm({ explorationId }: { explorationId: string }) {
+export default function ReflectionForm({
+  explorationId,
+  choice,
+}: {
+  explorationId: string;
+  choice?: string;
+}) {
   const [signals, setSignals] = useState<string[]>([]);
-  const [energy, setEnergy] = useState(0);
-  const [curiosity, setCuriosity] = useState(0);
-  const [intimidation, setIntimidation] = useState(0);
   const [notes, setNotes] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -62,11 +43,12 @@ export default function ReflectionForm({ explorationId }: { explorationId: strin
     );
   }
 
-  const canSubmit = signals.length > 0 && energy > 0 && curiosity > 0 && intimidation > 0;
+  const canSubmit = signals.length > 0;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
+    const { energy, curiosity, intimidation } = deriveLevels(signals);
     startTransition(async () => {
       await completeExploration(explorationId, {
         selectedSignals: signals,
@@ -74,30 +56,37 @@ export default function ReflectionForm({ explorationId }: { explorationId: strin
         curiosityLevel: curiosity,
         intimidationLevel: intimidation,
         notes: notes.trim() || undefined,
+        emotionalState: choice || undefined,
       });
     });
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-8">
-      {/* Signal chips */}
+    <form onSubmit={handleSubmit} className="flex flex-col gap-7">
+      {/* What they leaned toward (this-or-that explorations) */}
+      {choice && (
+        <div className="rounded-2xl border border-violet-100 bg-violet-50 px-5 py-4">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-violet-500">
+            You leaned toward
+          </p>
+          <p className="text-sm leading-relaxed text-stone-700">{choice}</p>
+        </div>
+      )}
+
+      {/* Feeling chips */}
       <div>
-        <p className="mb-1 text-sm font-medium text-stone-700">
-          How did this feel? <span className="font-normal text-stone-400">(select all that apply)</span>
-        </p>
-        <p className="mb-4 text-xs text-stone-400">
-          No right answer — just what&apos;s true for you.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {SIGNALS.map((s) => (
+        <p className="mb-1 text-base font-semibold text-stone-800">How did that feel?</p>
+        <p className="mb-4 text-sm text-stone-400">Tap anything that fits — there&apos;s no wrong answer.</p>
+        <div className="flex flex-wrap gap-2.5">
+          {FEELINGS.map((s) => (
             <button
               key={s}
               type="button"
               onClick={() => toggleSignal(s)}
-              className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
+              className={`rounded-full border px-4 py-2 text-sm transition active:scale-[0.97] ${
                 signals.includes(s)
-                  ? "border-violet-300 bg-violet-50 text-violet-800"
-                  : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
+                  ? "border-violet-300 bg-violet-100 font-medium text-violet-800"
+                  : "border-stone-200 bg-white text-stone-600 hover:border-violet-300"
               }`}
             >
               {s}
@@ -106,23 +95,16 @@ export default function ReflectionForm({ explorationId }: { explorationId: strin
         </div>
       </div>
 
-      {/* Scales */}
-      <div className="flex flex-col gap-5">
-        <Scale label="Energy level (1 = drained, 5 = energized)" value={energy} onChange={setEnergy} />
-        <Scale label="Curiosity level (1 = none, 5 = very curious)" value={curiosity} onChange={setCuriosity} />
-        <Scale label="Intimidation level (1 = none, 5 = very intimidated)" value={intimidation} onChange={setIntimidation} />
-      </div>
-
-      {/* Notes */}
+      {/* Optional note */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-stone-700">
-          Anything else you noticed? <span className="font-normal text-stone-400">(optional)</span>
+        <label className="mb-2 block text-sm text-stone-500">
+          Want to say more? <span className="text-stone-300">(optional)</span>
         </label>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="Any thoughts, surprises, or reactions…"
-          rows={3}
+          placeholder="Anything you noticed…"
+          rows={2}
           className="w-full rounded-xl border border-stone-200 bg-stone-50 px-4 py-3 text-sm text-stone-700 placeholder-stone-300 focus:border-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-100"
         />
       </div>
@@ -132,7 +114,7 @@ export default function ReflectionForm({ explorationId }: { explorationId: strin
         disabled={!canSubmit || pending}
         className="rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-violet-500 disabled:opacity-40 active:scale-[0.98]"
       >
-        {pending ? "Saving reflection…" : "Save reflection →"}
+        {pending ? "Saving…" : "Done →"}
       </button>
     </form>
   );

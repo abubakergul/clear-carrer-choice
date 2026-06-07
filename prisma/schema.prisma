@@ -58,6 +58,7 @@ model FitInsight {
   summary              String
   directions           String[]
   tensions             String[]
+  options              String[]  @default([])
   version              Int       @default(1)
   patternSummary       String?
   clarityOutput        String?

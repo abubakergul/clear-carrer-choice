@@ -15,6 +15,21 @@ const EMOTIONAL_WORDS = [
   "fascinating", "frustrating", "overwhelmed", "curious",
 ];
 
+function stageLabel(stage: string | null): string {
+  switch (stage) {
+    case "school":
+      return "still in school, figuring out what to study or aim for";
+    case "college":
+      return "in college/university, mid-degree and questioning the path";
+    case "graduating":
+      return "in their final year, about to finish, next step unclear";
+    case "graduated":
+      return "already graduated, direction still unclear";
+    default:
+      return "a student unsure about their direction";
+  }
+}
+
 function extractKeyUserQuotes(messages: { role: string; content: string }[]): string {
   const userMessages = messages.filter((m) => m.role === "user");
   const emotional = userMessages.filter((m) => {
@@ -86,14 +101,16 @@ export async function claimAndGenerate(
     .map((m) => `${m.role}: ${m.content}`)
     .join("\n");
   const keyUserQuotes = extractKeyUserQuotes(messages);
+  const educationStage = stageLabel(conv.educationStage);
   const insightPrompt = INSIGHT_PROMPT
     .replace("{keyUserQuotes}", keyUserQuotes)
+    .replace("{educationStage}", educationStage)
     .replace("{messages}", formatted);
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   // Generate FitInsight
-  let insightData: { summary: string; directions: string[]; tensions: string[] };
+  let insightData: { summary: string; directions: string[]; tensions: string[]; options?: string[] };
   try {
     const insightRes = await openai.responses.create({
       model: "gpt-4.1-mini",
@@ -112,6 +129,7 @@ export async function claimAndGenerate(
         summary: insightData.summary,
         directions: insightData.directions,
         tensions: insightData.tensions,
+        options: Array.isArray(insightData.options) ? insightData.options.slice(0, 4) : [],
       },
     });
   } catch {
@@ -126,8 +144,11 @@ export async function claimAndGenerate(
   if (existingActive) return { ok: true };
 
   // Generate first Exploration
+  const userOptions = Array.isArray(insightData.options) ? insightData.options.slice(0, 4) : [];
   const explorationPrompt = FIRST_EXPLORATION_PROMPT
     .replace("{keyUserQuotes}", keyUserQuotes)
+    .replace("{educationStage}", educationStage)
+    .replace("{options}", userOptions.join("\n") || "(none named)")
     .replace("{directions}", insightData.directions.join("\n"))
     .replace("{tensions}", insightData.tensions.join("\n"));
 
@@ -140,7 +161,17 @@ export async function claimAndGenerate(
     generationContext?: {
       basedOnSignals?: string[];
       basedOnTensions?: string[];
+      direction?: string;
+      option?: string;
       reason?: string;
+      interaction?: {
+        kind: string;
+        optionA?: string;
+        optionB?: string;
+        role?: string;
+        chunks?: { percent: number; text: string }[];
+        closer?: string;
+      };
     };
   };
 

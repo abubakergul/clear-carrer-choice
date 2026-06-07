@@ -33,9 +33,11 @@ const OPENING_BY_STAGE: Record<EducationStage, string> = {
   graduated:  "What's making it hard to figure out your next career move?",
 };
 
-// These must match exactly what the conversation prompt instructs the AI to output
-const PATTERN_TRIGGER = "I'm starting to see a pattern.";
-const CONTINUE_TRIGGER = "We've started building a picture.";
+// Apostrophe-free core of each closing line the conversation prompt emits. We
+// match on these (not the full sentence) so apostrophe variants the model may
+// produce — straight ' or curly ’ — never break detection.
+const PATTERN_TRIGGER = "starting to see a pattern";
+const CONTINUE_TRIGGER = "started building a picture";
 const SAFETY_MAX = 12;
 
 const STAGES = [
@@ -215,9 +217,10 @@ export default function ChatInterface() {
 
   function detectClosing(text: string): WallVariant | null {
     const normalized = text
-      .replace(/['']/g, "'")
-      .replace(/[""]/g, '"')
-      .replace(/[–—]/g, "-");
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]+/g, " ") // strip ALL punctuation — apostrophes, dashes, quotes
+      .replace(/\s+/g, " ")
+      .trim();
     if (normalized.includes(PATTERN_TRIGGER)) return "pattern";
     if (normalized.includes(CONTINUE_TRIGGER)) return "continue";
     return null;

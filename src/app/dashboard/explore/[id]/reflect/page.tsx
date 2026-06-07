@@ -7,23 +7,34 @@ import ReflectionForm from "@/components/dashboard/ReflectionForm";
 
 export default async function ReflectionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ choice?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/sign-in");
   const userId = session.user.id;
 
   const { id } = await params;
+  const { choice } = await searchParams;
 
   const exploration = await prisma.exploration.findFirst({
-    where: { id, userId, status: ExplorationStatus.ACTIVE },
+    where: { id, userId },
   });
 
   if (!exploration) notFound();
+  // Already reflected → send them to the payoff, not a dead 404.
+  if (exploration.status === ExplorationStatus.COMPLETED) {
+    redirect(`/dashboard/explore/${id}/shift`);
+  }
+  // Skipped or expired → bounce back to the (read-only) detail view.
+  if (exploration.status !== ExplorationStatus.ACTIVE) {
+    redirect(`/dashboard/explore/${id}`);
+  }
 
   return (
-    <div className="min-h-full px-10 py-9">
+    <div className="mx-auto min-h-full max-w-2xl px-6 py-9 sm:px-8">
       {/* Back */}
       <Link
         href={`/dashboard/explore/${exploration.id}`}
@@ -52,7 +63,7 @@ export default async function ReflectionPage({
         </p>
       </div>
 
-      <ReflectionForm explorationId={exploration.id} />
+      <ReflectionForm explorationId={exploration.id} choice={choice} />
     </div>
   );
 }

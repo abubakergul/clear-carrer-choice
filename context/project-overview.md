@@ -323,6 +323,14 @@ NOT:
 
 * instantly “find the perfect career”
 
+**The output is a direct, honest answer — not a hedging essay.** After ~5 explorations the Clarity Output leads with:
+
+* a one-sentence verdict derived from the user's own reactions (e.g. "Based on how you reacted, software is pulling clearly ahead of army"),
+* the "where your options stand" bars,
+* a short "what to do next".
+
+This resolves the product's central tension: it can give a confident *reflection of the user's own reactions* (which option is pulling ahead) without claiming fake certainty about their future. The verdict is a mirror, not a prophecy.
+
 ---
 
 # UX Philosophy
@@ -337,21 +345,22 @@ The product should feel:
 
 Avoid:
 
-* dashboards
-* analytics
-* charts
-* scores
-* percentages
-* gamification
-* streaks
+* clinical dashboards full of metrics
+* fake-certainty "fit scores" or percentages
+* shame-based streaks or productivity pressure
+
+Gentle, honest momentum IS welcome (this reverses the original hard ban on all progress — the founder found the product felt dead without it):
+
+* progress stars that light up one per exploration, toward unlocking the Clarity Output
+* a no-score "where your options stand" bar that simply mirrors the user's own reactions (warming / cooling / not tested yet)
 
 The interface should guide attention toward:
 
-> “What should I explore next?”
+> “Where do my options stand, and what should I explore next?”
 
 not:
 
-> “How much progress have I completed?”
+> “How much productivity have I completed?”
 
 ---
 
@@ -380,6 +389,14 @@ Explorations are not “tasks.”
 
 They are guided experiences designed to test assumptions gently.
 
+Explorations are now **interactive and in-app** wherever possible — the user never has to leave (leaving = they don't come back). Implemented formats:
+
+* **This-or-That** — tap one of two vivid, concrete workday scenes.
+* **The Real Day** — the honest, un-glamorized hour-by-hour breakdown of one narrow role (the boring parts and rough time-split included), rated chunk by chunk. This is the anti-"day in the life": it brings the *real* reality in-app rather than asking the user to imagine or to watch a glamorized video.
+* Plus lightweight thought-experiment / reflect-on-a-memory formats.
+
+Each exploration is tied to one of the user's named options, so reactions feed "where your options stand."
+
 Good explorations:
 
 * reduce pressure
@@ -404,21 +421,18 @@ The system prioritizes:
 
 # Reflection Philosophy
 
-After each exploration, users reflect using guided options.
+After each exploration, users reflect by tapping plain-language feelings — kept deliberately simple and readable (a stressed 17-year-old or ESL reader must understand instantly):
 
-Examples:
+* Excited / Curious / Enjoyed it / Calm
+* Bored / Confused / Stressed / Not for me
 
-* “I became curious quickly”
-* “I felt intimidated”
-* “I lost interest fast”
-* “I wanted to keep exploring”
-* “I preferred more structure”
+(The earlier 1–5 energy/curiosity/intimidation scales were removed for being too heavy; those numbers are now derived from the taps behind the scenes.) An optional free-text note remains.
 
 Reflections should:
 
-* feel lightweight
+* feel lightweight (a few taps, no homework)
 * generate strong behavioral signals
-* avoid long-form journaling initially
+* avoid long-form journaling
 
 ---
 

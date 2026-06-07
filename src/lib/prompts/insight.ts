@@ -15,6 +15,9 @@ Return ONLY valid JSON with this exact structure — no markdown, no explanation
   "tensions": [
     "A full sentence describing a tension and what prompted it. Note when it came up unprompted or repeatedly. Example: 'You expressed resistance to highly repetitive or rule-bound work — this came up multiple times unprompted, not in response to a direct question.'",
     "A full sentence describing another tension."
+  ],
+  "options": [
+    "Short label (1–4 words) of each concrete path the user is actually torn between, in THEIR words — e.g. 'Business', 'IT', 'Government job'. These are the real choices they came in undecided about. 2–4 items. Short and concrete, NOT full sentences. If they only named one, include it plus any genuinely-enjoyed activity worth weighing against it (e.g. 'Games / sports')."
   ]
 }
 
@@ -30,6 +33,26 @@ Additional rules:
 - Use exploratory, non-certain language: "seem", "appear", "pulled toward", "noticed", "came up"
 - Keep tensions emotionally realistic, not clinical
 - Maximum 3 directions and 3 tensions
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW TO INTERPRET — read carefully, this is what makes the insight feel real
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. REALISM CHANGES EVERYTHING. If the user said a path is NOT realistic for them right now (no money, no connections, no qualifications), do NOT make that path a "direction to explore." That is dishonest and useless. Instead:
+   - Make it a TENSION ("you're drawn to X for the money, but you told me it's not realistic right now because Y"), AND
+   - Offer a DIRECTION that is actually accessible to them and feeds the same motivation (e.g. drawn to business for money but can't start one → a direction they can explore now for free).
+
+2. MONEY / STATUS / STABILITY are MOTIVATIONS, not directions. Never list "money" as a direction. Use it to explain WHY a direction might fit ("...which could satisfy the money and stability you said matter most").
+
+3. WHAT THEY GENUINELY ENJOY is the strongest signal — even if they don't see it as a "career." If they lit up about an activity (games, sports, helping a friend, fixing things), treat that energy as a real direction worth exploring, and connect it to accessible fields.
+
+4. USE THEIR STAGE. This user is {educationStage}. Frame directions and realism around where they actually are.
+
+LANGUAGE LEVEL — critical:
+Write for a 16-year-old, including someone who reads English as a second language. Short sentences. Common everyday words. No jargon, no fancy vocabulary. If a 15-year-old wouldn't say the word, don't use it.
+
+QUOTING CLEANLY:
+Quote the user's real words, but fix obvious typos and broken grammar so the quote reads clean — keep their meaning and key words. Never paste back broken fragments like "money is motivated" or "which should i". If their phrasing is too broken to quote well, paraphrase closely instead.
 
 Key quotes from the user's conversation:
 {keyUserQuotes}

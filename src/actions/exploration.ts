@@ -20,6 +20,7 @@ type ReflectionData = {
   curiosityLevel: number;
   intimidationLevel: number;
   notes?: string;
+  emotionalState?: string; // e.g. the option picked in a this-or-that exploration
 };
 
 // ─── Core generation logic (private) ─────────────────────────────────────────
@@ -31,9 +32,16 @@ async function runGeneration(userId: string): Promise<void> {
   });
   if (existing) return;
 
+  // The set is 5. Once the user has completed 5, stop pushing new explorations —
+  // their answer is ready; don't make it feel like an endless treadmill.
+  const completedSoFar = await prisma.exploration.count({
+    where: { userId, status: ExplorationStatus.COMPLETED },
+  });
+  if (completedSoFar >= 5) return;
+
   const insight = await prisma.fitInsight.findUnique({
     where: { userId },
-    select: { directions: true, tensions: true },
+    select: { directions: true, tensions: true, options: true },
   });
   if (!insight) return;
 
@@ -77,6 +85,7 @@ async function runGeneration(userId: string): Promise<void> {
     .join("\n");
 
   const prompt = NEXT_EXPLORATION_PROMPT
+    .replace("{options}", insight.options.join("\n") || "(none named)")
     .replace("{directions}", insight.directions.join("\n"))
     .replace("{tensions}", insight.tensions.join("\n"))
     .replace("{history}", history || "No prior explorations.")
@@ -93,7 +102,17 @@ async function runGeneration(userId: string): Promise<void> {
     generationContext?: {
       basedOnSignals?: string[];
       basedOnTensions?: string[];
+      direction?: string;
+      option?: string;
       reason?: string;
+      interaction?: {
+        kind: string;
+        optionA?: string;
+        optionB?: string;
+        role?: string;
+        chunks?: { percent: number; text: string }[];
+        closer?: string;
+      };
     };
   };
 
@@ -198,6 +217,7 @@ export async function completeExploration(
         energyLevel: reflection.energyLevel,
         curiosityLevel: reflection.curiosityLevel,
         intimidationLevel: reflection.intimidationLevel,
+        emotionalState: reflection.emotionalState || null,
         notes: reflection.notes || null,
       },
     }),
@@ -215,7 +235,9 @@ export async function completeExploration(
     runInsightEvolution(userId).catch(() => {});
   }
 
-  redirect("/dashboard");
+  // Land on the payoff screen — the user sees their picture move in response to
+  // what they just reflected, instead of bouncing back to a list.
+  redirect(`/dashboard/explore/${explorationId}/shift`);
 }
 
 // ─── FitInsight evolution (fire-and-forget) ───────────────────────────────────

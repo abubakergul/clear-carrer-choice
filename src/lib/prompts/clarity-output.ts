@@ -36,13 +36,13 @@ Write a Clarity Output as valid JSON matching this exact shape:
 }
 
 ### Section: observations (3–5 items)
-Each is a single sentence. You MUST name specific signals and their counts from the reflection data — do not write a single observation without citing the signal evidence behind it.
-- Good: "In 6 of your 8 completed explorations, you selected Curious and Energized — both appeared most often in creative, visually-oriented contexts."
-- Good: "You selected Resistant or Overwhelmed in 3 of 4 structured explorations, suggesting high-structure environments create friction for you."
-- Bad: "You consistently feel curious." (no count, no context)
+Each is a single, HUMAN sentence — what you noticed about them, written like a person who paid close attention, NOT a data report.
+- Good: "The hands-on, creative explorations were the ones you kept wanting to continue."
+- Good: "Whenever the work got rigid and rule-heavy, you quietly pulled back."
+- Bad: "In 6 of your 8 explorations you selected Curious and Energized." (clinical count — never do this)
+- Bad: "Intimidation appeared at 4/5." (rating number — never do this)
 - Bad: "You are a creative person." (label, no evidence)
-- Bad: "You scored high on curiosity." (score language)
-Observational only — never evaluative.
+NO rating numbers (X/5), NO clinical counts ("in 3 of 4 reflections"). Say what it MEANS in plain words. Observational, never evaluative.
 
 ### Section: uncertainties (1–2 items)
 Honest acknowledgement of what the data cannot yet confirm. This builds trust — the system is not flattering, it's honest.
@@ -51,7 +51,7 @@ Honest acknowledgement of what the data cannot yet confirm. This builds trust �
 ### Section: environments (2–3 items)
 Environment types, not job titles. Each has:
 - title: a short phrase describing an environment type (e.g. "Collaborative creative problem-solving environments")
-- reasoning: 2–3 sentences grounded in the user's actual signal patterns. Reference specific signals/levels.
+- reasoning: 2–3 plain-language sentences grounded in how they actually reacted. Describe the feeling in words ("you stayed calm and engaged with people-facing tasks") — NEVER rating numbers like "1/5" or clinical counts.
 - action: one small, real-world thing to try. Not homework — a nudge. (e.g. "Find one person in this space and read how they describe their day-to-day.")
 Avoid: "You should become a UX Designer", salary data, job market info, long career descriptions.
 

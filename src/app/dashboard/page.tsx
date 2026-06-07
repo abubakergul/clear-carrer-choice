@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ExplorationStatus } from "@/generated/prisma/client";
 import { markExpiredExplorations } from "@/actions/exploration";
 import ExplorationGenerator from "@/components/dashboard/ExplorationGenerator";
+import Stars from "@/components/dashboard/Stars";
 import CoolDownTimer from "@/components/dashboard/CoolDownTimer";
 import MilestoneBanner from "@/components/dashboard/MilestoneBanner";
 
@@ -17,7 +18,7 @@ export default async function DashboardPage() {
   const [insight] = await Promise.all([
     prisma.fitInsight.findUnique({
       where: { userId },
-      select: { id: true, summary: true },
+      select: { id: true, summary: true, directions: true },
     }),
     markExpiredExplorations(userId),
   ]);
@@ -121,32 +122,52 @@ export default async function DashboardPage() {
       {/* ── Pattern milestone banner ───────────────────── */}
       {completedCount >= 5 && <MilestoneBanner />}
 
-      {/* ── Current Direction strip ────────────────────── */}
-      {insight.summary && (
-        <Link
-          href="/dashboard/pattern"
-          className="mb-6 flex items-center gap-3 rounded-xl border border-violet-100 bg-violet-50 px-4 py-3 transition-colors hover:bg-violet-100 group"
-        >
-          <svg width="16" height="16" viewBox="0 0 22 22" fill="none" aria-hidden="true" className="shrink-0 text-violet-400">
-            <circle cx="8"  cy="11" r="6" stroke="currentColor" strokeWidth="1.5" />
-            <circle cx="14" cy="11" r="6" stroke="currentColor" strokeWidth="1.5" opacity="0.5" />
-          </svg>
-          <p className="flex-1 line-clamp-1 text-[13px] leading-relaxed text-violet-700">
-            {insight.summary}
+      {/* ── Progress: a star per exploration, toward your Clarity Output ── */}
+      <div className="mb-6 rounded-2xl border border-violet-100 bg-white px-5 py-5">
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+            Your progress
           </p>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" className="shrink-0 text-violet-400 transition-transform group-hover:translate-x-0.5">
-            <path d="M2.5 7h9m-4-4 4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </Link>
-      )}
+          <Link
+            href="/dashboard/pattern"
+            className="text-xs text-violet-400 transition-colors hover:text-violet-600"
+          >
+            See your pattern →
+          </Link>
+        </div>
+        <Stars earned={Math.min(5, completedCount)} total={5} size={34} />
+        <p className="mt-4 text-center text-sm text-stone-500">
+          {completedCount >= 5
+            ? "All 5 lit — your answer is ready on your pattern page."
+            : `${Math.min(5, completedCount)} of 5 lit — ${5 - Math.min(5, completedCount)} more to unlock your answer.`}
+        </p>
+      </div>
 
       {/* ── Active exploration ─────────────────────────── */}
       <section className="mb-10">
         <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
-          Up next
+          {completedCount >= 5 ? "You're done" : "Up next"}
         </p>
 
-        {activeExploration ? (
+        {completedCount >= 5 ? (
+          <div className="rounded-2xl border border-violet-100 bg-violet-50 p-7">
+            <p className="mb-1 text-sm font-semibold text-stone-800">
+              You&apos;ve done your 5 explorations.
+            </p>
+            <p className="mb-5 max-w-sm text-sm leading-relaxed text-stone-500">
+              Your answer is ready — see where each of your options landed.
+            </p>
+            <Link
+              href="/dashboard/pattern"
+              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98]"
+            >
+              See where you&apos;ve landed
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M2.5 7h9m-4-4 4 4-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </Link>
+          </div>
+        ) : activeExploration ? (
           <div className="rounded-2xl border border-violet-100 bg-violet-50 p-7">
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-semibold text-violet-600">
@@ -285,12 +306,6 @@ export default async function DashboardPage() {
       )}
     </div>
   );
-}
-
-function generationReason(ctx: unknown): string | null {
-  if (!ctx || typeof ctx !== "object") return null;
-  const r = (ctx as Record<string, unknown>).reason;
-  return typeof r === "string" && r.trim() ? r.trim() : null;
 }
 
 function intensityLabel(i: string | null | undefined) {
