@@ -17,9 +17,22 @@ STUDENT CONTEXT: This student is in their final year and graduating soon. There 
 STUDENT CONTEXT: This student has already graduated and is trying to figure out their career direction. They may feel stuck, behind, or like they chose the wrong degree. Acknowledge their existing qualifications as an asset. Explore whether they want to use their degree, pivot away from it, or find a path that bridges both.`,
 };
 
+const MAX_MESSAGES = 20;
+const MAX_MESSAGE_LENGTH = 4000;
+
 export async function POST(req: Request) {
   try {
     const { messages, educationStage } = await req.json();
+
+    if (!Array.isArray(messages) || messages.length > MAX_MESSAGES) {
+      return Response.json({ error: "Invalid request" }, { status: 400 });
+    }
+
+    // Truncate any individual message that exceeds the per-message limit.
+    const safeMessages = messages.map((m: { role: string; content: string }) => ({
+      role: m.role,
+      content: typeof m.content === "string" ? m.content.slice(0, MAX_MESSAGE_LENGTH) : "",
+    }));
 
     const stageContext = educationStage ? (STAGE_CONTEXT[educationStage] ?? "") : "";
     const systemPrompt = CONVERSATION_PROMPT + stageContext;
@@ -29,7 +42,7 @@ export async function POST(req: Request) {
       stream: true,
       input: [
         { role: "system", content: systemPrompt },
-        ...messages,
+        ...safeMessages,
       ],
     });
 

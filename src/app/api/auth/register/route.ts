@@ -18,6 +18,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+  }
+
+  if (typeof name === "string" && name.length > 100) {
+    return NextResponse.json({ error: "Name is too long" }, { status: 400 });
+  }
+
   if (password !== confirmPassword) {
     return NextResponse.json(
       { error: "Passwords do not match" },

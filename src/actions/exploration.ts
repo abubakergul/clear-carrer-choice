@@ -13,6 +13,7 @@ import {
   ExplorationIntensity,
   ReflectionSource,
 } from "@/generated/prisma/client";
+import { SKIP_REASONS } from "@/lib/exploration";
 
 type ReflectionData = {
   selectedSignals: string[];
@@ -38,6 +39,10 @@ async function runGeneration(userId: string): Promise<void> {
     where: { userId, status: ExplorationStatus.COMPLETED },
   });
   if (completedSoFar >= 5) return;
+
+  // Pre-check passed. We now call OpenAI (slow). After the AI responds, we
+  // do a second check so two concurrent requests (e.g. shift page + dashboard)
+  // don't both slip through and create two ACTIVE explorations.
 
   const insight = await prisma.fitInsight.findUnique({
     where: { userId },
@@ -140,6 +145,14 @@ async function runGeneration(userId: string): Promise<void> {
       ? (data.intensity as ExplorationIntensity)
       : ExplorationIntensity.VERY_LIGHT;
 
+  // Second check — close the race window between the pre-check and the AI call.
+  // If another concurrent request already created an ACTIVE exploration, bail out.
+  const raceCheck = await prisma.exploration.findFirst({
+    where: { userId, status: ExplorationStatus.ACTIVE },
+    select: { id: true },
+  });
+  if (raceCheck) return;
+
   await prisma.exploration.create({
     data: {
       userId,
@@ -177,7 +190,19 @@ export async function skipExploration(
     where: { id: explorationId, userId, status: ExplorationStatus.ACTIVE },
     select: { id: true },
   });
+  // Already skipped (e.g. double-tap on skip button) — just go to dashboard.
   if (!exploration) redirect("/dashboard");
+
+  const alreadySkipped = await prisma.reflection.findFirst({
+    where: { explorationId },
+    select: { id: true },
+  });
+  if (alreadySkipped) redirect("/dashboard");
+
+  // Only accept reasons from the predefined set; reject arbitrary client strings.
+  const validReason = (SKIP_REASONS as readonly string[]).includes(reason)
+    ? reason
+    : SKIP_REASONS[0];
 
   await prisma.$transaction([
     prisma.reflection.create({
@@ -185,12 +210,19 @@ export async function skipExploration(
     }),
     prisma.exploration.update({
       where: { id: explorationId },
-      data: { status: ExplorationStatus.SKIPPED, skipReason: reason, skippedAt: new Date() },
+      data: { status: ExplorationStatus.SKIPPED, skipReason: validReason, skippedAt: new Date() },
     }),
   ]);
 
   redirect("/dashboard");
 }
+
+const VALID_SIGNALS = new Set([
+  "Excited", "Curious", "Enjoyed it", "Calm",
+  "Bored", "Confused", "Stressed", "Not for me",
+]);
+
+const MAX_NOTES_LENGTH = 1000;
 
 // ─── Complete — instant redirect, generation triggered client-side after ──────
 
@@ -206,19 +238,33 @@ export async function completeExploration(
     where: { id: explorationId, userId, status: ExplorationStatus.ACTIVE },
     select: { id: true },
   });
-  if (!exploration) redirect("/dashboard");
+  // If already completed (e.g. double-submit), go straight to the payoff screen.
+  if (!exploration) redirect(`/dashboard/explore/${explorationId}/shift`);
+
+  // Guard against a second concurrent submission creating a duplicate reflection.
+  const alreadyReflected = await prisma.reflection.findFirst({
+    where: { explorationId, source: ReflectionSource.COMPLETION },
+    select: { id: true },
+  });
+  if (alreadyReflected) redirect(`/dashboard/explore/${explorationId}/shift`);
+
+  // Sanitise client-supplied values.
+  const cleanSignals = reflection.selectedSignals.filter((s) => VALID_SIGNALS.has(s));
+  const cleanNotes = reflection.notes
+    ? reflection.notes.slice(0, MAX_NOTES_LENGTH)
+    : null;
 
   await prisma.$transaction([
     prisma.reflection.create({
       data: {
         explorationId,
         source: ReflectionSource.COMPLETION,
-        selectedSignals: reflection.selectedSignals,
+        selectedSignals: cleanSignals,
         energyLevel: reflection.energyLevel,
         curiosityLevel: reflection.curiosityLevel,
         intimidationLevel: reflection.intimidationLevel,
         emotionalState: reflection.emotionalState || null,
-        notes: reflection.notes || null,
+        notes: cleanNotes,
       },
     }),
     prisma.exploration.update({
