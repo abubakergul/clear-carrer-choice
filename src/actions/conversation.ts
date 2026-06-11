@@ -46,6 +46,17 @@ export async function saveMessages(
   userContent: string,
   assistantContent: string
 ) {
+  const session = await auth();
+  // Verify the conversation belongs to this user (or is still unclaimed for guests).
+  const conv = await prisma.conversation.findFirst({
+    where: {
+      id: conversationId,
+      userId: session?.user?.id ?? null,
+    },
+    select: { id: true },
+  });
+  if (!conv) return;
+
   await prisma.message.createMany({
     data: [
       { conversationId, role: "user", content: userContent },
@@ -151,6 +162,8 @@ export async function claimAndGenerate(
     .replace("{options}", userOptions.join("\n") || "(none named)")
     .replace("{directions}", insightData.directions.join("\n"))
     .replace("{tensions}", insightData.tensions.join("\n"));
+  // Note: second check is done after the AI call (see below) to close the
+  // race window between the pre-check and the OpenAI round-trip.
 
   type ExplorationAIResponse = {
     title: string;
@@ -196,6 +209,13 @@ export async function claimAndGenerate(
   const explorationIntensityValue = explorationData.intensity && validIntensities.includes(explorationData.intensity)
     ? (explorationData.intensity as ExplorationIntensity)
     : ExplorationIntensity.VERY_LIGHT;
+
+  // Second guard: re-check after the AI call to close the race window.
+  const activeAfterAI = await prisma.exploration.findFirst({
+    where: { userId, status: ExplorationStatus.ACTIVE },
+    select: { id: true },
+  });
+  if (activeAfterAI) return { ok: true };
 
   // Expire after 48 hours
   const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
