@@ -26,14 +26,37 @@ function stateColor(s: OptionStanding): string {
   }
 }
 
-export default function OptionsStanding({ standings }: { standings: OptionStanding[] }) {
+// Badge tying the reaction meter back to what they said going in: "matches what
+// you said" or "surprised you". Keyed by option label, supplied by the clarity step.
+function badgeStyle(note: string): string {
+  return note === "surprised you"
+    ? "border-violet-200 bg-violet-50 text-violet-600"
+    : "border-stone-200 bg-stone-50 text-stone-500";
+}
+
+export default function OptionsStanding({
+  standings,
+  notes,
+}: {
+  standings: OptionStanding[];
+  notes?: Record<string, string>;
+}) {
   return (
     <div className="flex flex-col gap-5">
-      {standings.map((s) => (
+      {standings.map((s) => {
+        const note = notes?.[s.label]?.trim();
+        return (
         <div key={s.label}>
-          <div className="mb-1.5 flex items-baseline justify-between">
+          <div className="mb-1.5 flex items-baseline justify-between gap-2">
             <span className="text-sm font-semibold text-stone-800">{s.label}</span>
-            <span className={`text-xs font-medium ${stateColor(s)}`}>{stateText(s)}</span>
+            <div className="flex items-center gap-2">
+              {note && s.state !== "untested" && (
+                <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${badgeStyle(note)}`}>
+                  {note}
+                </span>
+              )}
+              <span className={`text-xs font-medium ${stateColor(s)}`}>{stateText(s)}</span>
+            </div>
           </div>
           <div className="h-2.5 w-full overflow-hidden rounded-full bg-stone-100">
             <div
@@ -55,7 +78,8 @@ export default function OptionsStanding({ standings }: { standings: OptionStandi
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
       <p className="mt-1 text-xs text-stone-400">
         Based on how you&apos;ve reacted so far — not a verdict on what&apos;s right.
       </p>

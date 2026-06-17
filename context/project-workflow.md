@@ -14,7 +14,7 @@ What happens:
 
 1. User picks their education stage (school / college / graduating / graduated).
 2. A short guided conversation begins — 5 to 12 messages, mobile-first, emotionally aware.
-3. The AI explores interests, fears, motivations, tensions, and the concrete options the user is torn between (e.g. "army vs. software vs. business").
+3. The AI explores interests, fears, motivations, tensions, and the concrete options the user is torn between (e.g. "government sector vs. private vs. business").
 4. Mid-conversation chips surface (motivation, resources, fear, experience, yes/no, scale) to reduce typing friction.
 5. A circular progress ring shows conversation depth (3 segments).
 6. When enough signal is gathered, the AI emits a trigger phrase that opens the **signup wall**.
@@ -45,7 +45,7 @@ What happens:
 - `summary` — 1–2 sentences quoting the user's own words
 - `directions` — full explanatory sentences ("you seem drawn to X because you said Y")
 - `tensions` — what's pulling in opposite directions
-- `options String[]` — the concrete named paths the user is torn between (e.g. `["army", "software engineer"]`)
+- `options String[]` — the concrete named paths the user is torn between (e.g. `["field A", "field B"]`)
 
 The result page is intentionally lightweight — curiosity and emotional resonance, not certainty or career labeling.
 
@@ -179,7 +179,7 @@ The final answer page. Unlocks fully at 5 completions.
 ```json
 {
   "direction": "...",
-  "option": "army",
+  "option": "",
   "reason": "...",
   "basedOnSignals": ["Curious", "Bored"],
   "interaction": {

@@ -12,6 +12,7 @@ The exploration must:
 GROUND IT IN THEIR REALITY — most important rule:
 - NEVER ask them to DO or PLAN something the directions/tensions say they can't access right now. For a blocked interest, explore it only by OBSERVING or IMAGINING, never by acting on it.
 - Build on what genuinely gave them energy (look at the directions and recent positive signals).
+- {stageGuidance}
 
 BE CONCRETE AND REAL — no "air in the sky":
 - Name actual, specific, real-world moments — real tasks, tools, situations people in that path do day-to-day. Never vague ("imagine running a business").
@@ -51,7 +52,14 @@ SIGNAL-BASED ADJUSTMENT:
 - All skips → MUST try a completely different format and direction
 - Bored signals → switch format entirely, try thought experiment or comparison
 
+VARIETY ACROSS THE SET — don't make everything "imagine you…":
+A set of 5 explorations that are ALL imagined thought experiments feels fake and repetitive — users notice. Across the journey, mix imagined scenes with explorations that get them into something REAL: reading an actual job description or day-in-the-life write-up, looking at a real example of the work, or reaching out to one real person who does it. Aim for at least a couple of grounded, real-world ones across the 5 — not five daydreams in a row. Look at the history below: if the recent ones were all "imagine", make this one real.
+
 {skipWarning}
+
+{formatVariety}
+
+{groundingDirective}
 
 For type: OBSERVE | COMPARE | INTERACT | SIMULATE | REFLECT
 For intensity: VERY_LIGHT | LIGHT | MEDIUM (use MEDIUM only for users showing clear repeated curiosity)
@@ -79,11 +87,13 @@ If you choose a "this-or-that" exploration, the user taps between two scenes rig
 - Add an "interaction" object INSIDE generationContext with two vivid, concrete, one-sentence workday scenes:
   "interaction": { "kind": "this_or_that", "optionA": "First concrete scene, 1 sentence.", "optionB": "Second concrete scene, 1 sentence." }
 - The two scenes should pull in genuinely different directions so the choice is revealing.
+- REQUIRED: "kind" must be exactly "this_or_that" (lowercase, underscore). If you include the interaction object, optionA and optionB are both required. Never write a comparison title ("A or B") without including this interaction object.
 
 INTERACTIVE "REAL DAY" — strongly preferred when they're seriously weighing a path and need the un-glamorized truth:
 Shows the honest hour-by-hour breakdown of ONE narrow, specific role — boring parts included — and the user taps how each part feels. When you choose this format:
 - "title": "A real day as a [specific narrow role]"
 - "prompt": one line, e.g. "Here's what this work really looks like, hour to hour — dull parts included. Tap how each part feels."
+- ⚠️ MANDATORY: You MUST include an "interaction" object INSIDE generationContext (see below). Without it the chunks never appear and the user sees a broken page. If you are not going to provide the chunks, do NOT use this format at all — use a plain thought experiment instead.
 - Add an "interaction" object INSIDE generationContext:
   "interaction": {
     "kind": "real_day",
@@ -98,10 +108,12 @@ Shows the honest hour-by-hour breakdown of ONE narrow, specific role — boring 
   }
 - RULES: 3–5 chunks, percents roughly add to 100, largest-first. Show the UNGLAMOROUS reality — never a highlight reel. Plain words, real tasks.
 
-Use AT MOST ONE interaction per exploration (this_or_that OR real_day). Omit "interaction" for plain formats.
+Use AT MOST ONE interaction per exploration (this_or_that OR real_day). Omit "interaction" for plain formats. "kind" must be the exact string "this_or_that" or "real_day" — no other casing or format.
 
 COVER ALL THEIR OPTIONS — the whole point is helping them compare:
-The user is torn between the options listed below. Don't keep probing the same one. Look at the history: if an option has NOT been explored yet, strongly prefer testing it now. Rotate across their options so each gets a fair look — that's how they see where each one stands.
+The user is torn between the options listed below. Don't keep probing the same one. Rotate across their options so each gets a fair look — that's how they see where each one stands.
+
+{rotationDirective}
 
 User options (the concrete paths they're torn between — tie this exploration to ONE and copy it into generationContext.option):
 {options}

@@ -6,8 +6,12 @@ import { ExplorationStatus, ReflectionSource } from "@/generated/prisma/client";
 import { computeStanding, buildVerdict, type StandingItem } from "@/lib/options";
 import OptionsStanding from "@/components/dashboard/OptionsStanding";
 import ClarityGenerator from "@/components/dashboard/ClarityGenerator";
+import ImpactRing from "@/components/result/ImpactRing";
+import { parseDriverFactors } from "@/lib/driver-factors";
 
 type ClarityOutputData = {
+  fusedRead?: string;
+  pathNotes?: { option: string; note: string }[];
   observations: string[];
   uncertainties: string[];
   environments: { title: string; reasoning: string; action: string }[];
@@ -88,6 +92,8 @@ export default async function PatternPage() {
   const standings =
     insight.options.length > 0 ? computeStanding(insight.options, standingItems) : [];
 
+  const factors = parseDriverFactors(insight.driverFactors);
+
   // The "answer" unlocks at 5 completed explorations.
   const unlocked = totalCompleted >= 5;
   const verdict = unlocked && standings.length > 0 ? buildVerdict(standings) : null;
@@ -96,13 +102,29 @@ export default async function PatternPage() {
   // background when it's missing or the insight has evolved past it.
   const needsClarity =
     unlocked && (!insight.clarityOutput || insight.clarityInsightVersion < insight.version);
-  let nextSteps: string[] = [];
+  let clarity: ClarityOutputData | null = null;
   if (unlocked && insight.clarityOutput) {
     try {
-      nextSteps = (JSON.parse(insight.clarityOutput) as ClarityOutputData).nextSteps ?? [];
+      clarity = JSON.parse(insight.clarityOutput) as ClarityOutputData;
     } catch {
-      nextSteps = [];
+      clarity = null;
     }
+  }
+  const nextSteps = clarity?.nextSteps ?? [];
+  const fusedRead = clarity?.fusedRead?.trim() || null;
+
+  // Map each path's "matches/surprised" badge onto its option label so the meters
+  // can show how the real reactions compare to what they came in saying.
+  const pathNotes: Record<string, string> = {};
+  for (const pn of clarity?.pathNotes ?? []) {
+    if (!pn || typeof pn.option !== "string" || typeof pn.note !== "string") continue;
+    const match = insight.options.find(
+      (o) =>
+        o.toLowerCase() === pn.option.toLowerCase() ||
+        o.toLowerCase().includes(pn.option.toLowerCase()) ||
+        pn.option.toLowerCase().includes(o.toLowerCase())
+    );
+    if (match) pathNotes[match] = pn.note;
   }
 
   return (
@@ -126,13 +148,32 @@ export default async function PatternPage() {
         </p>
       </div>
 
-      {/* ── Where your options stand ─────────────────────── */}
+      {/* ── What's pulling you (IMPACT ring) ─────────────── */}
+      {factors.length > 0 && (
+        <section className="mb-9 rounded-2xl border border-stone-100 bg-white px-6 py-6 shadow-sm">
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
+            What&apos;s making this hard
+          </p>
+          <p className="mb-5 text-sm leading-6 text-stone-500">
+            The forces tugging at your choice — bigger and darker means it&apos;s
+            weighing on you more.
+          </p>
+          <ImpactRing factors={factors} />
+        </section>
+      )}
+
+      {/* ── Where you're landing (said + felt, fused) ────── */}
       {standings.length > 0 && (
         <section className="mb-9 rounded-2xl border border-stone-100 bg-white px-6 py-6 shadow-sm">
           <p className="mb-4 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
-            Where your options stand
+            {fusedRead ? "Where you're landing" : "Where your options stand"}
           </p>
-          <OptionsStanding standings={standings} />
+          {fusedRead && (
+            <p className="mb-5 border-l-2 border-violet-200 pl-4 text-[15px] font-medium leading-7 text-stone-700">
+              {fusedRead}
+            </p>
+          )}
+          <OptionsStanding standings={standings} notes={pathNotes} />
         </section>
       )}
 

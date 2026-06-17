@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import SignupWall from "./SignupWall";
 import { saveMessages } from "@/actions/conversation";
+import { trackClient } from "@/lib/track-client";
+import { Logo } from "@/components/Logo";
 
 type Message = { role: "user" | "assistant"; content: string };
-type WallVariant = "pattern" | "continue" | "dead";
+type WallVariant = "pattern" | "continue" | "dead" | "survival";
 type EducationStage = "school" | "college" | "graduating" | "graduated";
 
 const GARBAGE_ANSWERS = new Set([
@@ -38,6 +40,8 @@ const OPENING_BY_STAGE: Record<EducationStage, string> = {
 // produce — straight ' or curly ’ — never break detection.
 const PATTERN_TRIGGER = "starting to see a pattern";
 const CONTINUE_TRIGGER = "started building a picture";
+// Survival-mode closing — a unique, stable core phrase from that exact message.
+const SURVIVAL_TRIGGER = "keep one small thing going on the side";
 const SAFETY_MAX = 12;
 
 const STAGES = [
@@ -221,6 +225,7 @@ export default function ChatInterface() {
       .replace(/[^a-z0-9 ]+/g, " ") // strip ALL punctuation — apostrophes, dashes, quotes
       .replace(/\s+/g, " ")
       .trim();
+    if (normalized.includes(SURVIVAL_TRIGGER)) return "survival";
     if (normalized.includes(PATTERN_TRIGGER)) return "pattern";
     if (normalized.includes(CONTINUE_TRIGGER)) return "continue";
     return null;
@@ -259,6 +264,11 @@ export default function ChatInterface() {
     const next = [...messages, userMsg];
     setMessages(next);
 
+    // Funnel: the very first user message starts the journey.
+    if (userCount === 0) {
+      trackClient("chat_started", sessionIdRef.current, { stage: educationStage ?? undefined });
+    }
+
     // Dead session detection — 3 consecutive garbage answers (chip picks are never garbage)
     const newStreak = (!isChip && isGarbageAnswer(text)) ? garbageStreakRef.current + 1 : 0;
     garbageStreakRef.current = newStreak;
@@ -273,6 +283,7 @@ export default function ChatInterface() {
         setTimeout(() => {
           setWallVariant("dead");
           sessionStorage.setItem("ccc_wall", "dead");
+          trackClient("wall_reached", sessionIdRef.current, { variant: "dead" });
         }, 700);
       }, 400);
       return;
@@ -288,6 +299,7 @@ export default function ChatInterface() {
         setTimeout(() => {
           setWallVariant("continue");
           sessionStorage.setItem("ccc_wall", "continue");
+          trackClient("wall_reached", sessionIdRef.current, { variant: "continue" });
         }, 700);
       }, 400);
       return;
@@ -340,11 +352,32 @@ export default function ChatInterface() {
         setTimeout(() => {
           setWallVariant(variant);
           sessionStorage.setItem("ccc_wall", variant);
+          trackClient("wall_reached", sessionIdRef.current, { variant });
         }, 900);
       }
     } catch {
+      // Drop the empty assistant placeholder.
       setMessages((p) => p.slice(0, -1));
-      setError("Something went wrong. Try again.");
+      // Never dead-end: once there's a real conversation, a hiccup shouldn't look
+      // like a crash. Carry them to the signup wall (we already have enough to show
+      // something) instead of a scary error. Only the very first turns get a retry.
+      if (userCount + 1 >= 3) {
+        setMessages((p) => [
+          ...p,
+          {
+            role: "assistant",
+            content:
+              "We've started building a picture. Sign up to keep going — the more you share, the clearer it gets.",
+          },
+        ]);
+        setTimeout(() => {
+          setWallVariant("continue");
+          sessionStorage.setItem("ccc_wall", "continue");
+          trackClient("wall_reached", sessionIdRef.current, { variant: "continue", via: "error_fallback" });
+        }, 700);
+      } else {
+        setError("Something went wrong. Try again.");
+      }
     } finally {
       setIsStreaming(false);
       inputRef.current?.focus();
@@ -370,15 +403,7 @@ export default function ChatInterface() {
       {/* Header */}
       <header className="shrink-0 bg-white shadow-[0_1px_0_0_#e7e5e4]">
         <div className="mx-auto flex max-w-xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-600">
-              <svg viewBox="0 0 16 16" fill="none" className="h-4 w-4">
-                <circle cx="8" cy="6" r="3" fill="white" />
-                <path d="M3 14c0-2.761 2.239-4 5-4s5 1.239 5 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
-            </div>
-            <span className="text-sm font-semibold text-stone-900">ClearCareerChoice</span>
-          </div>
+          <Logo size={28} />
 
           {educationStage && (
             <div className="flex items-center gap-2.5">

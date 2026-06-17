@@ -6,6 +6,10 @@ import OpenAI from "openai";
 import { INSIGHT_PROMPT } from "@/lib/prompts/insight";
 import { FIRST_EXPLORATION_PROMPT } from "@/lib/prompts/first-exploration";
 import { ExplorationStatus, ExplorationType, ExplorationIntensity } from "@/generated/prisma/client";
+import { ExplorationAIResponse, isInteractiveBroken } from "@/lib/exploration";
+import { stageLabel, stageExplorationGuidance } from "@/lib/education-stage";
+import { parseDriverFactors } from "@/lib/driver-factors";
+import { track } from "@/lib/analytics";
 
 const EMOTIONAL_WORDS = [
   "love", "hate", "excited", "excitement", "scared", "fear", "boring", "bored",
@@ -14,21 +18,6 @@ const EMOTIONAL_WORDS = [
   "worried", "nervous", "thrilled", "dull", "exhausting", "energizing",
   "fascinating", "frustrating", "overwhelmed", "curious",
 ];
-
-function stageLabel(stage: string | null): string {
-  switch (stage) {
-    case "school":
-      return "still in school, figuring out what to study or aim for";
-    case "college":
-      return "in college/university, mid-degree and questioning the path";
-    case "graduating":
-      return "in their final year, about to finish, next step unclear";
-    case "graduated":
-      return "already graduated, direction still unclear";
-    default:
-      return "a student unsure about their direction";
-  }
-}
 
 function extractKeyUserQuotes(messages: { role: string; content: string }[]): string {
   const userMessages = messages.filter((m) => m.role === "user");
@@ -121,7 +110,7 @@ export async function claimAndGenerate(
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   // Generate FitInsight
-  let insightData: { summary: string; directions: string[]; tensions: string[]; options?: string[] };
+  let insightData: { summary: string; directions: string[]; tensions: string[]; options?: string[]; factors?: unknown };
   try {
     const insightRes = await openai.responses.create({
       model: "gpt-4.1-mini",
@@ -134,6 +123,7 @@ export async function claimAndGenerate(
   }
 
   try {
+    const driverFactors = parseDriverFactors(insightData.factors);
     await prisma.fitInsight.create({
       data: {
         userId,
@@ -141,8 +131,10 @@ export async function claimAndGenerate(
         directions: insightData.directions,
         tensions: insightData.tensions,
         options: Array.isArray(insightData.options) ? insightData.options.slice(0, 4) : [],
+        driverFactors: driverFactors.length > 0 ? driverFactors : undefined,
       },
     });
+    await track("insight_generated", { userId });
   } catch {
     return { ok: false, error: "insight_generation_failed" };
   }
@@ -159,34 +151,12 @@ export async function claimAndGenerate(
   const explorationPrompt = FIRST_EXPLORATION_PROMPT
     .replace("{keyUserQuotes}", keyUserQuotes)
     .replace("{educationStage}", educationStage)
+    .replace("{stageGuidance}", stageExplorationGuidance(conv.educationStage))
     .replace("{options}", userOptions.join("\n") || "(none named)")
     .replace("{directions}", insightData.directions.join("\n"))
     .replace("{tensions}", insightData.tensions.join("\n"));
   // Note: second check is done after the AI call (see below) to close the
   // race window between the pre-check and the OpenAI round-trip.
-
-  type ExplorationAIResponse = {
-    title: string;
-    prompt: string;
-    estimatedMinutes?: number;
-    type?: string;
-    intensity?: string;
-    generationContext?: {
-      basedOnSignals?: string[];
-      basedOnTensions?: string[];
-      direction?: string;
-      option?: string;
-      reason?: string;
-      interaction?: {
-        kind: string;
-        optionA?: string;
-        optionB?: string;
-        role?: string;
-        chunks?: { percent: number; text: string }[];
-        closer?: string;
-      };
-    };
-  };
 
   let explorationData: ExplorationAIResponse;
   try {
@@ -198,6 +168,21 @@ export async function claimAndGenerate(
     explorationData = JSON.parse(raw);
   } catch {
     return { ok: false, error: "exploration_generation_failed" };
+  }
+
+  // If the AI chose an interactive format but omitted the required interaction data,
+  // retry once — the interaction object is what makes the page actually work.
+  if (isInteractiveBroken(explorationData)) {
+    try {
+      const retryRes = await openai.responses.create({
+        model: "gpt-4.1-mini",
+        input: [{ role: "user", content: explorationPrompt }],
+      });
+      const retryRaw = retryRes.output_text.replace(/```(?:json)?\n?/g, "").trim();
+      explorationData = JSON.parse(retryRaw);
+    } catch {
+      // retry failed — fall through with original data, page will use plain fallback
+    }
   }
 
   // Validate and coerce enums returned by the AI

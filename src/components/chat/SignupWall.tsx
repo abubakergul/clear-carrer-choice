@@ -1,6 +1,6 @@
 "use client";
 
-type Props = { variant: "pattern" | "continue" | "dead" };
+type Props = { variant: "pattern" | "continue" | "dead" | "survival" };
 
 const CONTENT = {
   pattern: {
@@ -9,6 +9,15 @@ const CONTENT = {
     subtext:
       "Sign up to see what I found — and get a 7-day plan to test if it actually fits you.",
     cta: "See my results →",
+  },
+  // Survival mode: someone who just needs income now. No 7-day-plan hype — honest,
+  // low-pressure, leaves the door open for when they have room to explore fit.
+  survival: {
+    icon: "→",
+    heading: "Income first — that's the right call.",
+    subtext:
+      "When you've got room to breathe and want to figure out what actually fits, this'll be here. Save your spot now, or just come back any time.",
+    cta: "Save my spot for later →",
   },
   continue: {
     icon: "◎",

@@ -13,7 +13,10 @@ import {
   ExplorationIntensity,
   ReflectionSource,
 } from "@/generated/prisma/client";
-import { SKIP_REASONS } from "@/lib/exploration";
+import { SKIP_REASONS, ExplorationAIResponse, isInteractiveBroken } from "@/lib/exploration";
+import { stageExplorationGuidance } from "@/lib/education-stage";
+import { parseDriverFactors } from "@/lib/driver-factors";
+import { track } from "@/lib/analytics";
 
 type ReflectionData = {
   selectedSignals: string[];
@@ -23,6 +26,66 @@ type ReflectionData = {
   notes?: string;
   emotionalState?: string; // e.g. the option picked in a this-or-that exploration
 };
+
+// Pull the option an exploration was built to test out of its generationContext.
+// The AI is told to copy the option verbatim, but casing/whitespace can drift, so
+// callers match it back against the canonical option list loosely.
+function extractTestedOption(ctx: unknown): string {
+  if (!ctx || typeof ctx !== "object") return "";
+  const o = (ctx as Record<string, unknown>).option;
+  return typeof o === "string" ? o.trim() : "";
+}
+
+// The interaction format an exploration used ("this_or_that", "real_day", or "" for
+// a plain format), normalised so casing/separator drift doesn't hide a repeat.
+function extractKind(ctx: unknown): string {
+  if (!ctx || typeof ctx !== "object") return "";
+  const it = (ctx as Record<string, unknown>).interaction;
+  if (!it || typeof it !== "object") return "";
+  const raw = (it as Record<string, unknown>).kind;
+  if (typeof raw !== "string") return "";
+  return raw
+    .replace(/([a-z])([A-Z])/g, "$1_$2")
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_");
+}
+
+// Decide which option the next exploration should test so coverage stays balanced.
+// Rotation is enforced here in code — not left to the prompt, which drifts and can
+// pile several explorations onto one option while another never gets a fair look.
+// Returns the least-covered option and how many times it has been tested so far.
+function pickLeastCoveredOption(
+  options: string[],
+  pastContexts: unknown[]
+): { option: string; timesTested: number } | null {
+  if (options.length === 0) return null;
+
+  const norm = (s: string) => s.trim().toLowerCase();
+  const coverage = new Map<string, number>();
+  for (const opt of options) coverage.set(norm(opt), 0);
+
+  for (const ctx of pastContexts) {
+    const tested = norm(extractTestedOption(ctx));
+    if (!tested) continue;
+    // Match back to a canonical option: exact-normalised, else substring either way.
+    const match =
+      options.find((o) => norm(o) === tested) ??
+      options.find((o) => norm(o).includes(tested) || tested.includes(norm(o)));
+    if (match) coverage.set(norm(match), (coverage.get(norm(match)) ?? 0) + 1);
+  }
+
+  // Least-covered wins; ties resolve to the order the user named them.
+  let best = options[0];
+  let min = coverage.get(norm(options[0])) ?? 0;
+  for (const opt of options) {
+    const c = coverage.get(norm(opt)) ?? 0;
+    if (c < min) {
+      min = c;
+      best = opt;
+    }
+  }
+  return { option: best, timesTested: min };
+}
 
 // ─── Core generation logic (private) ─────────────────────────────────────────
 
@@ -55,6 +118,49 @@ async function runGeneration(userId: string): Promise<void> {
     orderBy: { createdAt: "desc" },
     take: 5,
     include: { reflections: { take: 1 } },
+  });
+
+  // Coverage is counted across ALL past explorations, not just the recent 5, so a
+  // single under-explored option still gets pulled forward late in the cycle.
+  const allPastContexts = await prisma.exploration.findMany({
+    where: { userId, status: { not: ExplorationStatus.ACTIVE } },
+    select: { generationContext: true },
+  });
+  const leastCovered = pickLeastCoveredOption(
+    insight.options ?? [],
+    allPastContexts.map((e) => e.generationContext)
+  );
+  const rotationDirective = leastCovered
+    ? `ROTATION — MANDATORY: Of all the user's options, "${leastCovered.option}" has been explored the LEAST so far (${leastCovered.timesTested} time${leastCovered.timesTested === 1 ? "" : "s"}). Your next exploration MUST test "${leastCovered.option}". Copy it verbatim into generationContext.option. Do not pick a different option, even if another feels more interesting — balanced coverage is what lets the user actually compare.`
+    : "";
+
+  // Keep this-or-that from taking over: it's the easy format, so the model reaches
+  // for it repeatedly. If it appeared in the last exploration, or twice in the last
+  // three, force a different format this time.
+  const recentKinds = recentExplorations.map((e) => extractKind(e.generationContext));
+  const thisOrThatInLast3 = recentKinds.slice(0, 3).filter((k) => k === "this_or_that").length;
+  const formatVariety =
+    recentKinds[0] === "this_or_that" || thisOrThatInLast3 >= 2
+      ? `FORMAT VARIETY — MANDATORY: "this-or-that" has been used very recently and is getting repetitive. Do NOT use this-or-that this time. Pick a clearly different format: a "real day" breakdown, a thought experiment, a vivid role-play, or a memory reflection.`
+      : "";
+
+  // Push back against an all-imagination set: SIMULATE/REFLECT are the "imagine
+  // you…" / "recall when…" formats. If the last two were those, force a grounded,
+  // real-world exploration this time so the journey doesn't feel like daydreaming.
+  const imaginativeTypes = new Set<string>(["SIMULATE", "REFLECT"]);
+  const lastTwoImaginative =
+    recentExplorations.slice(0, 2).filter((e) => imaginativeTypes.has(e.type ?? "")).length >= 2;
+  const groundingDirective = lastTwoImaginative
+    ? `GROUNDING — MANDATORY: The recent explorations were imagination-based ("imagine you…"). This one must get them OUT of their head and into something REAL: read an actual job description or a real "day in the life" write-up, look at a real example of the work, or reach out to one real person who does it. Do NOT use another imagined thought experiment this time.`
+    : "";
+
+  // educationStage is captured per-conversation; pull it from the user's most recent
+  // one so explorations stay grounded in what they can actually reach (a school
+  // student has no college lab to "try").
+  const latestConversation = await prisma.conversation.findFirst({
+    where: { userId },
+    orderBy: { createdAt: "desc" },
+    select: { educationStage: true },
   });
 
   // Detect consecutive skips — reset count on first non-skip
@@ -94,34 +200,15 @@ async function runGeneration(userId: string): Promise<void> {
     .replace("{directions}", insight.directions.join("\n"))
     .replace("{tensions}", insight.tensions.join("\n"))
     .replace("{history}", history || "No prior explorations.")
-    .replace("{skipWarning}", skipWarning);
+    .replace("{skipWarning}", skipWarning)
+    .replace("{rotationDirective}", rotationDirective)
+    .replace("{formatVariety}", formatVariety)
+    .replace("{groundingDirective}", groundingDirective)
+    .replace("{stageGuidance}", stageExplorationGuidance(latestConversation?.educationStage));
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-  type AIResponse = {
-    title: string;
-    prompt: string;
-    estimatedMinutes?: number;
-    type?: string;
-    intensity?: string;
-    generationContext?: {
-      basedOnSignals?: string[];
-      basedOnTensions?: string[];
-      direction?: string;
-      option?: string;
-      reason?: string;
-      interaction?: {
-        kind: string;
-        optionA?: string;
-        optionB?: string;
-        role?: string;
-        chunks?: { percent: number; text: string }[];
-        closer?: string;
-      };
-    };
-  };
-
-  let data: AIResponse;
+  let data: ExplorationAIResponse;
   try {
     const res = await openai.responses.create({
       model: "gpt-4.1-mini",
@@ -131,6 +218,19 @@ async function runGeneration(userId: string): Promise<void> {
     data = JSON.parse(raw);
   } catch {
     return;
+  }
+
+  if (isInteractiveBroken(data)) {
+    try {
+      const retryRes = await openai.responses.create({
+        model: "gpt-4.1-mini",
+        input: [{ role: "user", content: prompt }],
+      });
+      const retryRaw = retryRes.output_text.replace(/```(?:json)?\n?/g, "").trim();
+      data = JSON.parse(retryRaw);
+    } catch {
+      // retry failed — fall through, page will use plain fallback
+    }
   }
 
   const validTypes = Object.values(ExplorationType) as string[];
@@ -276,6 +376,7 @@ export async function completeExploration(
   const completedCount = await prisma.exploration.count({
     where: { userId, status: ExplorationStatus.COMPLETED },
   });
+  await track("exploration_completed", { userId, meta: { count: completedCount } });
   if (completedCount % 3 === 0) {
     // Fire-and-forget — does not block the redirect
     runInsightEvolution(userId).catch(() => {});
@@ -369,6 +470,8 @@ export async function markExpiredExplorations(userId: string): Promise<void> {
 // ─── Clarity Output generation ────────────────────────────────────────────────
 
 type ClarityOutputData = {
+  fusedRead?: string;
+  pathNotes?: { option: string; note: string }[];
   observations: string[];
   uncertainties: string[];
   environments: { title: string; reasoning: string; action: string }[];
@@ -387,6 +490,8 @@ export async function generateClarityOutput(): Promise<{ ok: boolean }> {
       summary: true,
       directions: true,
       tensions: true,
+      options: true,
+      driverFactors: true,
       version: true,
       clarityOutput: true,
       clarityInsightVersion: true,
@@ -434,10 +539,16 @@ export async function generateClarityOutput(): Promise<{ ok: boolean }> {
     .map((s) => `- "${s.title}": "${s.skipReason}"`)
     .join("\n") || "None.";
 
+  const factorsText = parseDriverFactors(insight.driverFactors)
+    .map((f) => `- ${f.label} (${f.weight}%)${f.reason ? `: ${f.reason}` : ""}`)
+    .join("\n") || "Not captured.";
+
   const prompt = CLARITY_OUTPUT_PROMPT
     .replace("{summary}", insight.summary)
     .replace("{directions}", insight.directions.join("\n"))
     .replace("{tensions}", insight.tensions.join("\n"))
+    .replace("{factors}", factorsText)
+    .replace("{options}", insight.options.join("\n") || "(none named)")
     .replace("{reflections}", reflectionText)
     .replace("{skipReasons}", skipText);
 

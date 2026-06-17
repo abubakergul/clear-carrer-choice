@@ -18,6 +18,9 @@ Return ONLY valid JSON with this exact structure — no markdown, no explanation
   ],
   "options": [
     "Short label (1–4 words) of each concrete path the user is actually torn between, in THEIR words — e.g. 'Business', 'IT', 'Government job'. These are the real choices they came in undecided about. 2–4 items. Short and concrete, NOT full sentences. If they only named one, include it plus any genuinely-enjoyed activity worth weighing against it (e.g. 'Games / sports')."
+  ],
+  "factors": [
+    { "label": "ONE of EXACTLY these — Money, Stability, Family, Friends, Personal interest, Freedom, Impact, Status — no other words", "weight": 35, "reason": "Short phrase (under 12 words) grounded in what they actually said, e.g. 'You said the wrong choice means disappointing your family.'" }
   ]
 }
 
@@ -47,6 +50,17 @@ HOW TO INTERPRET — read carefully, this is what makes the insight feel real
 3. WHAT THEY GENUINELY ENJOY is the strongest signal — even if they don't see it as a "career." If they lit up about an activity (games, sports, helping a friend, fixing things), treat that energy as a real direction worth exploring, and connect it to accessible fields.
 
 4. USE THEIR STAGE. This user is {educationStage}. Frame directions and realism around where they actually are.
+
+THE PULL BREAKDOWN ("factors") — this powers a visual that shows the student WHY they're stuck:
+The factors are the competing forces tugging at their choice — what genuinely matters to them AND what's pressuring them. Together these are usually the real reason the decision feels hard.
+- Use ONLY these labels, spelled exactly: Money, Stability, Family, Friends, Personal interest, Freedom, Impact, Status. Never invent a label.
+- What each means: Money = pay/wealth pull. Stability = safety, a secure steady job. Family = family expectations or fear of disappointing them. Friends = following or being influenced by peers. Personal interest = genuine curiosity/enjoyment in the work itself. Freedom = independence, not being boxed in. Impact = wanting to help or matter. Status = respect, prestige, proving themselves.
+- Include only factors that ACTUALLY showed up in the conversation — 2 to 6 of them. Do NOT pad with factors they never raised.
+- "weight" is how strongly each one is pulling, relative to the others. The weights across all factors should add up to roughly 100. Put the biggest real pressure highest — if they said the wrong choice means "disappointing my family", Family should be heavy.
+- Every "reason" must cite something they actually said. No generic filler.
+- If the conversation genuinely surfaced none of these, return an empty array.
+
+5. DON'T FABRICATE A LEAN — this is critical for trust. If the conversation did NOT give you a real reason to prefer one option over another — they said "anything", "both", "I don't know", stayed open, or never reacted differently to one than the other — then DO NOT claim they lean toward one. Saying "you lean toward X" when nothing in the chat supports it is the fastest way to lose them: they'll see explorations that don't match and decide the tool is guessing. Instead, say plainly what's true: they haven't found a reason to prefer one yet, and the next few days of small experiments are exactly how they'll find out. An honest "you're genuinely undecided, here's how we'll test it" beats a confident wrong guess every time.
 
 LANGUAGE LEVEL — critical:
 Write for a 16-year-old, including someone who reads English as a second language. Short sentences. Common everyday words. No jargon, no fancy vocabulary. If a 15-year-old wouldn't say the word, don't use it.

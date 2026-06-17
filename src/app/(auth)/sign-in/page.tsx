@@ -6,6 +6,7 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { credentialsSignIn } from "@/actions/auth";
 import { Toast } from "@/components/ui/Toast";
+import { LogoMark } from "@/components/Logo";
 
 export default function SignInPage() {
   return (
@@ -45,10 +46,8 @@ function SignInContent() {
       {registered && <Toast message="Account created! Sign in to continue." />}
 
       {/* Header */}
-      <div className="mb-8 text-center">
-        <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-violet-100">
-          <span className="text-xl text-violet-600">✦</span>
-        </div>
+      <div className="mb-8 flex flex-col items-center text-center">
+        <LogoMark size={48} className="mb-4" />
         <h1 className="text-2xl font-bold tracking-tight text-stone-900">
           Sign in
         </h1>

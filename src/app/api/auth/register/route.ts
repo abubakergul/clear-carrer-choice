@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
+import { track } from "@/lib/analytics";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -55,6 +56,8 @@ export async function POST(req: NextRequest) {
     data: { name: name ?? null, email, password: hashed },
     select: { id: true, email: true, name: true },
   });
+
+  await track("signed_up", { userId: user.id });
 
   return NextResponse.json({ success: true, user }, { status: 201 });
 }

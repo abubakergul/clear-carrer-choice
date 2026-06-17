@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Toast } from "@/components/ui/Toast";
+import { LogoMark } from "@/components/Logo";
 
 const INPUT_CLASS =
   "rounded-lg border border-stone-200 px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 outline-none transition focus:border-violet-400 focus:ring-2 focus:ring-violet-100";
@@ -65,10 +66,8 @@ export default function RegisterPage() {
       {success && <Toast message="Account created!" />}
 
       {/* Header */}
-      <div className="mb-8 text-center">
-        <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-full bg-violet-100">
-          <span className="text-xl text-violet-600">✦</span>
-        </div>
+      <div className="mb-8 flex flex-col items-center text-center">
+        <LogoMark size={48} className="mb-4" />
         <h1 className="text-2xl font-bold tracking-tight text-stone-900">
           Create your account
         </h1>

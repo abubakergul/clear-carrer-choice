@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { redirect, notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ExplorationStatus } from "@/generated/prisma/client";
 import SkipDialog from "@/components/dashboard/SkipDialog";
@@ -8,6 +8,16 @@ import ThisOrThat from "@/components/dashboard/ThisOrThat";
 import RealDay from "@/components/dashboard/RealDay";
 
 type DayChunk = { percent: number; text: string };
+
+// Normalises the AI-returned kind string so casing / separator variations
+// ("realDay", "REAL_DAY", "real-day") all match the canonical snake_case form.
+function normaliseKind(raw: unknown): string {
+  if (typeof raw !== "string") return "";
+  return raw
+    .replace(/([a-z])([A-Z])/g, "$1_$2") // camelCase → snake_case
+    .toLowerCase()
+    .replace(/[-\s]+/g, "_");
+}
 
 // A "real day" exploration: the honest, un-glamorized hour-by-hour breakdown of
 // one specific role, which the user rates part by part — in-app.
@@ -18,7 +28,7 @@ function realDay(
   const it = (ctx as Record<string, unknown>).interaction;
   if (!it || typeof it !== "object") return null;
   const o = it as Record<string, unknown>;
-  if (o.kind !== "real_day") return null;
+  if (normaliseKind(o.kind) !== "real_day") return null;
 
   const role = typeof o.role === "string" ? o.role.trim() : "";
   const rawChunks = Array.isArray(o.chunks) ? o.chunks : [];
@@ -48,7 +58,7 @@ function thisOrThat(ctx: unknown): { optionA: string; optionB: string } | null {
   const it = (ctx as Record<string, unknown>).interaction;
   if (!it || typeof it !== "object") return null;
   const o = it as Record<string, unknown>;
-  if (o.kind !== "this_or_that") return null;
+  if (normaliseKind(o.kind) !== "this_or_that") return null;
   const a = typeof o.optionA === "string" ? o.optionA.trim() : "";
   const b = typeof o.optionB === "string" ? o.optionB.trim() : "";
   return a && b ? { optionA: a, optionB: b } : null;
@@ -87,7 +97,13 @@ export default async function ExplorationDetailPage({
     return count;
   })();
 
-  if (!exploration) notFound();
+  // Missing, or not this user's exploration (e.g. a stale link from another
+  // account) — send them to their own dashboard instead of a dead 404 page.
+  if (!exploration) redirect("/dashboard");
+
+  // Expired explorations have no actions — send the user straight to the dashboard
+  // so a new one gets generated automatically instead of showing a dead-end page.
+  if (exploration.status === ExplorationStatus.EXPIRED) redirect("/dashboard");
 
   const isActive = exploration.status === ExplorationStatus.ACTIVE;
   const isCompleted = exploration.status === ExplorationStatus.COMPLETED;

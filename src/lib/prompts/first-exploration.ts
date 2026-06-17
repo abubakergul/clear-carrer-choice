@@ -18,6 +18,7 @@ The exploration must:
 GROUND IT IN THEIR REALITY — most important rule
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - This user is {educationStage}. Fit the exploration to where they actually are.
+- {stageGuidance}
 - NEVER ask them to DO or PLAN something they told you they can't access right now (e.g. if they said starting a business isn't realistic, do NOT have them "plan a business"). For a blocked interest, explore it only by OBSERVING or IMAGINING — never by acting on it.
 - Build the exploration around what genuinely gave them energy in the conversation. If they lit up about an activity (games, sports, helping people, fixing things), use THAT, even if it seems unrelated to a "career."
 
@@ -90,11 +91,13 @@ If you choose a "this-or-that" exploration, the user taps between two scenes rig
 - Add an "interaction" object INSIDE generationContext with two vivid, concrete, one-sentence workday scenes:
   "interaction": { "kind": "this_or_that", "optionA": "First concrete scene, 1 sentence.", "optionB": "Second concrete scene, 1 sentence." }
 - The two scenes should pull in genuinely different directions so the choice is revealing.
+- REQUIRED: "kind" must be exactly "this_or_that" (lowercase, underscore). If you include the interaction object, optionA and optionB are both required. Never write a comparison title ("A or B") without including this interaction object.
 
 INTERACTIVE "REAL DAY" — strongly preferred when they're seriously weighing a path and need the un-glamorized truth:
-Shows the honest hour-by-hour breakdown of ONE narrow, specific role — the boring parts included — and the user taps how each part feels. When you choose this format:
-- "title": "A real day as a [specific narrow role]" (e.g. "A real day as a small grocery-shop owner", NOT "business")
+Shows the honest hour-by-hour breakdown of ONE narrow, specific role — boring parts included — and the user taps how each part feels. When you choose this format:
+- "title": "A real day as a [specific narrow role]" — follow this exact format (e.g. "A real day as a small grocery-shop owner", NOT "business")
 - "prompt": one line, e.g. "Here's what this work really looks like, hour to hour — dull parts included. Tap how each part feels."
+- ⚠️ MANDATORY: You MUST include an "interaction" object INSIDE generationContext (see below). Without it the chunks never appear and the user sees a broken page. If you are not going to provide the chunks, do NOT use this format at all — use a plain thought experiment instead.
 - Add an "interaction" object INSIDE generationContext:
   "interaction": {
     "kind": "real_day",
@@ -109,7 +112,7 @@ Shows the honest hour-by-hour breakdown of ONE narrow, specific role — the bor
   }
 - RULES: 3–5 chunks, percents roughly add to 100, ordered largest-first. Show the UNGLAMOROUS reality — most jobs are mostly routine. NEVER a highlight reel. Plain simple words, real concrete tasks.
 
-Use AT MOST ONE interaction per exploration (this_or_that OR real_day). Omit "interaction" entirely for plain formats.
+Use AT MOST ONE interaction per exploration (this_or_that OR real_day). Omit "interaction" entirely for plain formats. "kind" must be the exact string "this_or_that" or "real_day" — no other casing or format.
 
 Key quotes from the user's conversation (use these to ground the reason field):
 {keyUserQuotes}

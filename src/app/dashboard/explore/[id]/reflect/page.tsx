@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/db";
-import { redirect, notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ExplorationStatus } from "@/generated/prisma/client";
 import ReflectionForm from "@/components/dashboard/ReflectionForm";
@@ -23,7 +23,9 @@ export default async function ReflectionPage({
     where: { id, userId },
   });
 
-  if (!exploration) notFound();
+  // Missing, or not this user's exploration (stale link / wrong account) — go to
+  // their own dashboard rather than a dead 404.
+  if (!exploration) redirect("/dashboard");
   // Already reflected → send them to the payoff, not a dead 404.
   if (exploration.status === ExplorationStatus.COMPLETED) {
     redirect(`/dashboard/explore/${id}/shift`);

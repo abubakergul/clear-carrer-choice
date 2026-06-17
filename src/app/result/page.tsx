@@ -4,6 +4,9 @@ import { prisma } from "@/lib/db";
 import { ExplorationStatus } from "@/generated/prisma/client";
 import Link from "next/link";
 import DirectionCard from "@/components/result/DirectionCard";
+import ImpactRing from "@/components/result/ImpactRing";
+import { Logo } from "@/components/Logo";
+import { parseDriverFactors } from "@/lib/driver-factors";
 
 export default async function ResultPage() {
   const session = await auth();
@@ -20,11 +23,12 @@ export default async function ResultPage() {
   });
 
   const firstName = session.user.name?.split(" ")[0] ?? "you";
+  const factors = parseDriverFactors(insight.driverFactors);
 
   return (
     <div className="min-h-screen bg-[#FAFAF9]">
       <nav className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
-        <span className="text-sm font-semibold text-stone-400">ClearCareerChoice</span>
+        <Logo size={24} />
         <Link href="/dashboard" className="text-xs text-stone-400 hover:text-stone-600">
           Skip →
         </Link>
@@ -66,6 +70,23 @@ export default async function ResultPage() {
         >
           <p className="text-sm leading-7 text-stone-700">{insight.summary}</p>
         </div>
+
+        {/* ── What's pulling you (IMPACT ring) ─────────────── */}
+        {factors.length > 0 && (
+          <div
+            className="anim-fade-up mb-8 rounded-2xl border border-stone-100 bg-white px-6 py-6"
+            style={{ animationDelay: "120ms" }}
+          >
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-stone-400">
+              What&apos;s making this hard
+            </p>
+            <p className="mb-5 text-sm leading-6 text-stone-500">
+              These are the forces tugging at your choice — the bigger and darker
+              the pull, the more it&apos;s weighing on you.
+            </p>
+            <ImpactRing factors={factors} />
+          </div>
+        )}
 
         {/* ── Directions ───────────────────────────────────── */}
         <div className="anim-fade-up mb-8" style={{ animationDelay: "160ms" }}>
