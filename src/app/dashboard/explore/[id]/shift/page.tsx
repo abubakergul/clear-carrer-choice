@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ExplorationStatus, ReflectionSource } from "@/generated/prisma/client";
 import { buildShift, type CompletedItem } from "@/lib/constellation";
+import { EXPLORATION_GOAL } from "@/lib/exploration";
 import Stars from "@/components/dashboard/Stars";
 import ExplorationGenerator from "@/components/dashboard/ExplorationGenerator";
 
@@ -75,8 +76,8 @@ export default async function ShiftPage({
   });
 
   const completedCount = completed.length;
-  const earned = Math.min(5, completedCount);
-  const remaining = Math.max(0, 5 - completedCount);
+  const earned = Math.min(EXPLORATION_GOAL, completedCount);
+  const remaining = Math.max(0, EXPLORATION_GOAL - completedCount);
 
   return (
     <div className="min-h-full px-6 py-12 sm:px-10">
@@ -97,7 +98,7 @@ export default async function ShiftPage({
 
         {/* A star lights up for this exploration */}
         <div className="anim-fade-up mb-5 mt-2" style={{ animationDelay: "120ms" }}>
-          <Stars earned={earned} total={5} justEarned />
+          <Stars earned={earned} total={EXPLORATION_GOAL} justEarned />
         </div>
 
         {/* The reaction read — instant, grounded in their own answers */}
@@ -113,8 +114,8 @@ export default async function ShiftPage({
           style={{ animationDelay: "460ms" }}
         >
           {remaining > 0
-            ? `${earned} of 5 lit — ${remaining} more to unlock your answer.`
-            : "All 5 lit — your answer is ready."}
+            ? `${earned} of ${EXPLORATION_GOAL} lit — ${remaining} more to unlock your answer.`
+            : `All ${EXPLORATION_GOAL} lit — your answer is ready.`}
         </p>
 
         {/* Continue */}
@@ -122,7 +123,7 @@ export default async function ShiftPage({
           className="anim-fade-in flex flex-col items-center gap-3"
           style={{ animationDelay: "560ms" }}
         >
-          {completedCount >= 5 ? (
+          {completedCount >= EXPLORATION_GOAL ? (
             <>
               <Link
                 href="/dashboard/pattern"
@@ -152,7 +153,7 @@ export default async function ShiftPage({
                 href="/dashboard/pattern"
                 className="text-xs text-stone-400 hover:text-stone-600"
               >
-                See your full picture →
+                See your pattern so far →
               </Link>
             </>
           )}

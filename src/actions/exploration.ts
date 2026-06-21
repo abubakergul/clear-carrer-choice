@@ -13,7 +13,7 @@ import {
   ExplorationIntensity,
   ReflectionSource,
 } from "@/generated/prisma/client";
-import { SKIP_REASONS, ExplorationAIResponse, isInteractiveBroken } from "@/lib/exploration";
+import { SKIP_REASONS, ExplorationAIResponse, isInteractiveBroken, sanitizeBrokenInteraction, EXPLORATION_GOAL } from "@/lib/exploration";
 import { stageExplorationGuidance } from "@/lib/education-stage";
 import { parseDriverFactors } from "@/lib/driver-factors";
 import { track } from "@/lib/analytics";
@@ -96,12 +96,12 @@ async function runGeneration(userId: string): Promise<void> {
   });
   if (existing) return;
 
-  // The set is 5. Once the user has completed 5, stop pushing new explorations —
-  // their answer is ready; don't make it feel like an endless treadmill.
+  // Once the user has completed the goal, stop pushing new explorations — their
+  // answer is ready; don't make it feel like an endless treadmill.
   const completedSoFar = await prisma.exploration.count({
     where: { userId, status: ExplorationStatus.COMPLETED },
   });
-  if (completedSoFar >= 5) return;
+  if (completedSoFar >= EXPLORATION_GOAL) return;
 
   // Pre-check passed. We now call OpenAI (slow). After the AI responds, we
   // do a second check so two concurrent requests (e.g. shift page + dashboard)
@@ -154,6 +154,15 @@ async function runGeneration(userId: string): Promise<void> {
     ? `GROUNDING — MANDATORY: The recent explorations were imagination-based ("imagine you…"). This one must get them OUT of their head and into something REAL: read an actual job description or a real "day in the life" write-up, look at a real example of the work, or reach out to one real person who does it. Do NOT use another imagined thought experiment this time.`
     : "";
 
+  // Passive history isn't enough — the model repeats roles/titles (e.g. two
+  // identical "A real day as a front-end developer"). List the exact ones already
+  // done and forbid repeating them.
+  const avoidRepeats = recentExplorations.length
+    ? `NO REPEATS — MANDATORY: These explorations have ALREADY been done. Do NOT generate another with the same role or a near-identical title — pick a genuinely different angle, slice, or format:\n${recentExplorations
+        .map((e) => `- "${e.title}"`)
+        .join("\n")}`
+    : "";
+
   // educationStage is captured per-conversation; pull it from the user's most recent
   // one so explorations stay grounded in what they can actually reach (a school
   // student has no college lab to "try").
@@ -204,6 +213,7 @@ async function runGeneration(userId: string): Promise<void> {
     .replace("{rotationDirective}", rotationDirective)
     .replace("{formatVariety}", formatVariety)
     .replace("{groundingDirective}", groundingDirective)
+    .replace("{avoidRepeats}", avoidRepeats)
     .replace("{stageGuidance}", stageExplorationGuidance(latestConversation?.educationStage));
 
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -232,6 +242,10 @@ async function runGeneration(userId: string): Promise<void> {
       // retry failed — fall through, page will use plain fallback
     }
   }
+
+  // Still broken after the retry → strip the interactive framing so the user
+  // never sees a "tap each part" prompt with nothing to tap.
+  data = sanitizeBrokenInteraction(data);
 
   const validTypes = Object.values(ExplorationType) as string[];
   const validIntensities = Object.values(ExplorationIntensity) as string[];

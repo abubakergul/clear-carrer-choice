@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { CONVERSATION_PROMPT } from "@/lib/prompts/conversation";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { withLogger } from "@/lib/logger";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -29,7 +30,7 @@ STUDENT CONTEXT: This student has already graduated and is trying to figure out 
 const MAX_MESSAGES = 30;
 const MAX_MESSAGE_LENGTH = 4000;
 
-export async function POST(req: Request) {
+export const POST = withLogger("/api/chat", async function (req: Request) {
   try {
     const limit = rateLimit(`chat:${clientIp(req)}`, CHAT_RATE_LIMIT, CHAT_RATE_WINDOW_MS);
     if (!limit.ok) {
@@ -97,4 +98,4 @@ export async function POST(req: Request) {
       { status: 503 }
     );
   }
-}
+});

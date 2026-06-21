@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ExplorationStatus } from "@/generated/prisma/client";
 import { markExpiredExplorations } from "@/actions/exploration";
+import { EXPLORATION_GOAL } from "@/lib/exploration";
 import ExplorationGenerator from "@/components/dashboard/ExplorationGenerator";
 import Stars from "@/components/dashboard/Stars";
 import CoolDownTimer from "@/components/dashboard/CoolDownTimer";
@@ -120,7 +121,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Pattern milestone banner ───────────────────── */}
-      {completedCount >= 5 && <MilestoneBanner />}
+      {completedCount >= EXPLORATION_GOAL && <MilestoneBanner />}
 
       {/* ── Progress: a star per exploration, toward your Clarity Output ── */}
       <div className="mb-6 rounded-2xl border border-violet-100 bg-white px-5 py-5">
@@ -135,24 +136,24 @@ export default async function DashboardPage() {
             See your pattern →
           </Link>
         </div>
-        <Stars earned={Math.min(5, completedCount)} total={5} size={34} />
+        <Stars earned={Math.min(EXPLORATION_GOAL, completedCount)} total={EXPLORATION_GOAL} size={34} />
         <p className="mt-4 text-center text-sm text-stone-500">
-          {completedCount >= 5
-            ? "All 5 lit — your answer is ready on your pattern page."
-            : `${Math.min(5, completedCount)} of 5 lit — ${5 - Math.min(5, completedCount)} more to unlock your answer.`}
+          {completedCount >= EXPLORATION_GOAL
+            ? `All ${EXPLORATION_GOAL} lit — your answer is ready on your pattern page.`
+            : `${Math.min(EXPLORATION_GOAL, completedCount)} of ${EXPLORATION_GOAL} lit — ${EXPLORATION_GOAL - Math.min(EXPLORATION_GOAL, completedCount)} more to unlock your answer.`}
         </p>
       </div>
 
       {/* ── Active exploration ─────────────────────────── */}
       <section className="mb-10">
         <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
-          {completedCount >= 5 ? "You're done" : "Up next"}
+          {completedCount >= EXPLORATION_GOAL ? "You're done" : "Up next"}
         </p>
 
-        {completedCount >= 5 ? (
+        {completedCount >= EXPLORATION_GOAL ? (
           <div className="rounded-2xl border border-violet-100 bg-violet-50 p-7">
             <p className="mb-1 text-sm font-semibold text-stone-800">
-              You&apos;ve done your 5 explorations.
+              You&apos;ve done your {EXPLORATION_GOAL} explorations.
             </p>
             <p className="mb-5 max-w-sm text-sm leading-relaxed text-stone-500">
               Your answer is ready — see where each of your options landed.

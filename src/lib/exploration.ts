@@ -1,3 +1,7 @@
+// How many explorations unlock the answer. Kept short on purpose — real users
+// found 5 too long. Single source of truth so progress, gating, and copy agree.
+export const EXPLORATION_GOAL = 3;
+
 export type ExplorationAIResponse = {
   title: string;
   prompt: string;
@@ -49,6 +53,23 @@ export function isInteractiveBroken(data: ExplorationAIResponse): boolean {
   }
 
   return false;
+}
+
+// If an interactive exploration is STILL broken after a retry, strip the
+// interactive framing rather than save a page that promises taps/scenes it can't
+// show. Degrades to a plain "picture it" reflection — generic, but never broken.
+export function sanitizeBrokenInteraction(
+  data: ExplorationAIResponse
+): ExplorationAIResponse {
+  if (!isInteractiveBroken(data)) return data;
+  const ctx = { ...(data.generationContext ?? {}) };
+  delete ctx.interaction;
+  return {
+    ...data,
+    prompt:
+      "Picture a normal working day in this kind of work — the routine parts, the busy parts, the dull stretches, and any moment that might spark something. Spend a quiet minute imagining it. Notice which parts you'd actually look forward to, and which would wear you down.",
+    generationContext: ctx,
+  };
 }
 
 export const SKIP_REASONS = [

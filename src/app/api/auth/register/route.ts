@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { track } from "@/lib/analytics";
+import { withLogger } from "@/lib/logger";
 
-export async function POST(req: NextRequest) {
+export const POST = withLogger<NextRequest>("/api/auth/register", async function (req) {
   const body = await req.json();
   const { name, email, password, confirmPassword } = body as {
     name?: string;
@@ -60,4 +61,4 @@ export async function POST(req: NextRequest) {
   await track("signed_up", { userId: user.id });
 
   return NextResponse.json({ success: true, user }, { status: 201 });
-}
+});

@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import UserAvatar from "@/components/ui/UserAvatar";
 import { signOutAction } from "@/actions/auth";
 
@@ -29,28 +28,6 @@ export default function UserMenu({ name, email, image }: Props) {
       {/* Dropdown — opens upward */}
       {open && (
         <div className="absolute bottom-full left-0 right-0 mb-1.5 overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-stone-100">
-          <Link
-            href="/profile"
-            onClick={() => setOpen(false)}
-            className="flex cursor-pointer items-center gap-2 px-4 py-2.5 text-sm text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-            </svg>
-            View profile
-          </Link>
-          <div className="mx-3 h-px bg-stone-100" />
           <form action={signOutAction}>
             <button
               type="submit"

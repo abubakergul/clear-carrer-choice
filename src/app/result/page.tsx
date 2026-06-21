@@ -3,11 +3,12 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { ExplorationStatus } from "@/generated/prisma/client";
 import Link from "next/link";
-import DirectionCard from "@/components/result/DirectionCard";
 import ImpactRing from "@/components/result/ImpactRing";
-import { Logo } from "@/components/Logo";
 import { parseDriverFactors } from "@/lib/driver-factors";
+import { Logo } from "@/components/Logo";
 
+// The post-signup REVEAL — a short, animated visual moment, not a report. The
+// detailed breakdown (directions, tensions, standings) lives on the pattern page.
 export default async function ResultPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/sign-in");
@@ -24,140 +25,93 @@ export default async function ResultPage() {
 
   const firstName = session.user.name?.split(" ")[0] ?? "you";
   const factors = parseDriverFactors(insight.driverFactors);
+  const topFactor = factors[0] ?? null;
 
   return (
-    <div className="min-h-screen bg-[#FAFAF9]">
-      <nav className="flex items-center justify-between border-b border-stone-100 px-6 py-4">
+    <div className="relative min-h-screen overflow-hidden bg-[#FAFAF9]">
+      {/* Soft aurora backdrop — gives the reveal some life and depth */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-28 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-violet-300/40 blur-3xl" />
+        <div className="absolute top-44 -right-16 h-60 w-60 rounded-full bg-fuchsia-200/40 blur-3xl" />
+        <div className="absolute bottom-0 -left-16 h-60 w-60 rounded-full bg-indigo-200/30 blur-3xl" />
+      </div>
+
+      <nav className="relative flex items-center justify-between px-6 py-4">
         <Logo size={24} />
         <Link href="/dashboard" className="text-xs text-stone-400 hover:text-stone-600">
           Skip →
         </Link>
       </nav>
 
-      <main className="mx-auto max-w-lg px-6 pb-16 pt-10">
-
-        {/* ── Hero ─────────────────────────────────────────── */}
-        <div className="anim-fade-up mb-8" style={{ animationDelay: "0ms" }}>
-          {/* Abstract pattern visual — three overlapping rings */}
-          <svg
-            width="64"
-            height="64"
-            viewBox="0 0 64 64"
-            fill="none"
-            className="mb-5"
-            aria-hidden="true"
-          >
-            <circle cx="24" cy="28" r="18" stroke="#c4b5fd" strokeWidth="1.5" />
-            <circle cx="40" cy="28" r="18" stroke="#a78bfa" strokeWidth="1.5" opacity="0.65" />
-            <circle cx="32" cy="44" r="18" stroke="#7c3aed" strokeWidth="1.5" opacity="0.35" />
-          </svg>
-
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-violet-100 px-3 py-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-violet-500" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-violet-600">
-              Your initial picture
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold text-stone-900">
-            Here&apos;s what I found, {firstName}.
-          </h1>
-        </div>
-
-        {/* ── Summary ──────────────────────────────────────── */}
-        <div
-          className="anim-fade-up mb-8 rounded-2xl bg-violet-50 px-6 py-5 ring-1 ring-violet-100"
-          style={{ animationDelay: "80ms" }}
-        >
-          <p className="text-sm leading-7 text-stone-700">{insight.summary}</p>
-        </div>
-
-        {/* ── What's pulling you (IMPACT ring) ─────────────── */}
-        {factors.length > 0 && (
-          <div
-            className="anim-fade-up mb-8 rounded-2xl border border-stone-100 bg-white px-6 py-6"
-            style={{ animationDelay: "120ms" }}
-          >
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-stone-400">
-              What&apos;s making this hard
-            </p>
-            <p className="mb-5 text-sm leading-6 text-stone-500">
-              These are the forces tugging at your choice — the bigger and darker
-              the pull, the more it&apos;s weighing on you.
-            </p>
-            <ImpactRing factors={factors} />
-          </div>
-        )}
-
-        {/* ── Directions ───────────────────────────────────── */}
-        <div className="anim-fade-up mb-8" style={{ animationDelay: "160ms" }}>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400">
-            Paths worth exploring
-          </p>
-          <div className="flex flex-col gap-3">
-            {insight.directions.map((label, i) => (
-              <DirectionCard
-                key={i}
-                index={i}
-                label={label}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* ── Tensions ─────────────────────────────────────── */}
-        {insight.tensions.length > 0 && (
-          <div className="anim-fade-up mb-8" style={{ animationDelay: "240ms" }}>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-stone-400">
-              Tensions to work through
-            </p>
-            <div className="rounded-xl border border-amber-100 bg-amber-50 px-5 py-4">
-              <ul className="flex flex-col gap-3">
-                {insight.tensions.map((t, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-stone-600">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-400" />
-                    {t}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
-
-        {/* ── First Exploration ────────────────────────────── */}
-        {exploration ? (
-          <div
-            className="anim-fade-up mb-8 rounded-2xl bg-stone-900 p-6 text-white"
-            style={{ animationDelay: "320ms" }}
-          >
-            <p className="mb-2 text-xs font-semibold uppercase tracking-widest text-stone-400">
-              Your first step
-            </p>
-            <h2 className="mb-2 text-base font-bold leading-snug">{exploration.title}</h2>
-            <p className="mb-6 text-sm leading-relaxed text-stone-400">
-              A short reflection designed around your conversation — about 10 minutes.
-            </p>
-            <Link
-              href={`/dashboard/explore/${exploration.id}`}
-              className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-500"
-            >
-              Start exploring →
-            </Link>
-          </div>
-        ) : (
-          <div className="anim-fade-up mb-8" style={{ animationDelay: "320ms" }}>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-xl bg-stone-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-800"
-            >
-              Go to dashboard →
-            </Link>
-          </div>
-        )}
-
-        {/* ── Disclaimer ───────────────────────────────────── */}
+      <main className="relative mx-auto flex max-w-md flex-col items-center px-6 pb-16 pt-6 text-center">
         <p
-          className="anim-fade-up text-center text-xs leading-relaxed text-stone-400"
-          style={{ animationDelay: "400ms" }}
+          className="anim-fade-in mb-3 text-xs font-semibold uppercase tracking-widest text-violet-500"
+          style={{ animationDelay: "0ms" }}
+        >
+          Your picture
+        </p>
+        <h1
+          className="anim-fade-up mb-8 text-3xl font-bold leading-tight text-stone-900"
+          style={{ animationDelay: "100ms" }}
+        >
+          Here&apos;s what we found, {firstName}.
+        </h1>
+
+        {/* The reveal card */}
+        <div
+          className="anim-fade-up w-full rounded-3xl border border-violet-100 bg-white/80 p-7 shadow-xl shadow-violet-100/60 backdrop-blur"
+          style={{ animationDelay: "240ms" }}
+        >
+          {factors.length > 0 ? (
+            <>
+              <div className="mb-5 flex justify-center">
+                <ImpactRing factors={factors} />
+              </div>
+              {topFactor && (
+                <p className="text-sm leading-6 text-stone-500">
+                  The biggest thing pulling at your choice is{" "}
+                  <span className="font-semibold text-stone-800">
+                    {topFactor.label.toLowerCase()}
+                  </span>
+                  {factors.length > 1 ? ", with a couple of others underneath." : "."}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="text-sm leading-7 text-stone-700">{insight.summary}</p>
+          )}
+        </div>
+
+        {/* One next step */}
+        {exploration ? (
+          <Link
+            href={`/dashboard/explore/${exploration.id}`}
+            className="anim-fade-in mt-8 inline-flex items-center gap-2 rounded-2xl bg-violet-600 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-violet-200 transition hover:scale-105 active:scale-95"
+            style={{ animationDelay: "380ms" }}
+          >
+            Start exploring →
+          </Link>
+        ) : (
+          <Link
+            href="/dashboard"
+            className="anim-fade-in mt-8 inline-flex items-center gap-2 rounded-2xl bg-stone-900 px-7 py-3.5 text-sm font-semibold text-white transition hover:scale-105 active:scale-95"
+            style={{ animationDelay: "380ms" }}
+          >
+            Go to dashboard →
+          </Link>
+        )}
+
+        <Link
+          href="/dashboard/pattern"
+          className="anim-fade-in mt-4 text-xs text-stone-400 hover:text-stone-600"
+          style={{ animationDelay: "460ms" }}
+        >
+          See the full breakdown →
+        </Link>
+
+        <p
+          className="anim-fade-in mt-10 text-xs leading-relaxed text-stone-400"
+          style={{ animationDelay: "560ms" }}
         >
           One conversation — a starting point, not a verdict.
           <br />

@@ -14,6 +14,15 @@ function colorFor(rank: number): string {
   return DRIVER_FACTOR_PALETTE[Math.min(rank, DRIVER_FACTOR_PALETTE.length - 1)];
 }
 
+// The exact weights are a rough estimate, so we don't show a false-precise "40%".
+// Instead, a plain relative word — honest about being approximate. Relative to the
+// strongest factor so the top one always reads as the biggest.
+function magnitudeLabel(weight: number, max: number, isTop: boolean): string {
+  if (isTop) return "biggest pull"; // only the single strongest factor
+  const r = max > 0 ? weight / max : 0;
+  return r >= 0.6 ? "strong pull" : "smaller pull";
+}
+
 export default function ImpactRing({ factors }: { factors: DriverFactor[] }) {
   if (!factors || factors.length === 0) return null;
 
@@ -31,9 +40,11 @@ export default function ImpactRing({ factors }: { factors: DriverFactor[] }) {
     };
   });
 
+  const maxWeight = Math.max(...factors.map((f) => f.weight));
+
   const ariaLabel =
     "What's pulling at your choice: " +
-    factors.map((f) => `${f.label} ${f.weight}%`).join(", ");
+    factors.map((f, i) => `${f.label}, ${magnitudeLabel(f.weight, maxWeight, i === 0)}`).join(", ");
 
   return (
     <div>
@@ -97,8 +108,8 @@ export default function ImpactRing({ factors }: { factors: DriverFactor[] }) {
                   <span className="text-sm font-semibold text-stone-700">
                     {f.label}
                   </span>
-                  <span className="text-sm font-semibold tabular-nums text-stone-400">
-                    {f.weight}%
+                  <span className="shrink-0 text-xs font-medium text-stone-400">
+                    {magnitudeLabel(f.weight, maxWeight, i === 0)}
                   </span>
                 </div>
                 {f.reason && (

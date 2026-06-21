@@ -18,12 +18,15 @@ export default function ThisOrThat({ explorationId, optionA, optionB }: Props) {
     if (pending) return;
     setPicked(which);
     const choice = which === "A" ? optionA : optionB;
-    // Brief beat so the selected state registers, then carry the choice to reflect.
+    // Carry the choice via sessionStorage instead of a long URL query string
+    // (long ?choice= values were 404'ing the reflect route in dev).
+    try {
+      sessionStorage.setItem(`ccc_choice_${explorationId}`, choice);
+    } catch {}
+    // Brief beat so the selected state registers, then go to reflect.
     startTransition(() => {
       setTimeout(() => {
-        router.push(
-          `/dashboard/explore/${explorationId}/reflect?choice=${encodeURIComponent(choice)}`
-        );
+        router.push(`/dashboard/explore/${explorationId}/reflect`);
       }, 280);
     });
   }

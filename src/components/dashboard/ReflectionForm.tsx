@@ -1,19 +1,20 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { completeExploration } from "@/actions/exploration";
 
-// Plain-English feelings. No "intimidated" / "resistant" — words a stressed
-// student shouldn't have to look up.
-const FEELINGS = [
-  "Excited",
-  "Curious",
-  "Enjoyed it",
-  "Calm",
-  "Bored",
-  "Confused",
-  "Stressed",
-  "Not for me",
+// Plain-English feelings with an emoji so a tap feels fast and human, not like a
+// clinical form. The `value` is what gets stored + scored (do not change those
+// strings); the emoji + label are display only.
+const FEELINGS: { value: string; emoji: string }[] = [
+  { value: "Excited", emoji: "🤩" },
+  { value: "Curious", emoji: "🤔" },
+  { value: "Enjoyed it", emoji: "😄" },
+  { value: "Calm", emoji: "😌" },
+  { value: "Bored", emoji: "🥱" },
+  { value: "Confused", emoji: "😵‍💫" },
+  { value: "Stressed", emoji: "😣" },
+  { value: "Not for me", emoji: "🙅" },
 ];
 
 // The numeric levels still feed insight evolution + clarity, so we derive them
@@ -28,14 +29,22 @@ function deriveLevels(signals: string[]) {
 
 export default function ReflectionForm({
   explorationId,
-  choice,
 }: {
   explorationId: string;
-  choice?: string;
 }) {
   const [signals, setSignals] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [pending, startTransition] = useTransition();
+  // The this-or-that / real-day choice is carried in sessionStorage (not the URL)
+  // to keep the reflect route's URL short.
+  const [choice, setChoice] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    try {
+      const c = sessionStorage.getItem(`ccc_choice_${explorationId}`);
+      if (c) setChoice(c);
+    } catch {}
+  }, [explorationId]);
 
   function toggleSignal(s: string) {
     setSignals((prev) =>
@@ -78,18 +87,19 @@ export default function ReflectionForm({
         <p className="mb-1 text-base font-semibold text-stone-800">How did that feel?</p>
         <p className="mb-4 text-sm text-stone-400">Tap anything that fits — there&apos;s no wrong answer.</p>
         <div className="flex flex-wrap gap-2.5">
-          {FEELINGS.map((s) => (
+          {FEELINGS.map(({ value, emoji }) => (
             <button
-              key={s}
+              key={value}
               type="button"
-              onClick={() => toggleSignal(s)}
-              className={`rounded-full border px-4 py-2 text-sm transition active:scale-[0.97] ${
-                signals.includes(s)
+              onClick={() => toggleSignal(value)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm transition active:scale-[0.97] ${
+                signals.includes(value)
                   ? "border-violet-300 bg-violet-100 font-medium text-violet-800"
                   : "border-stone-200 bg-white text-stone-600 hover:border-violet-300"
               }`}
             >
-              {s}
+              <span aria-hidden="true">{emoji}</span>
+              {value}
             </button>
           ))}
         </div>

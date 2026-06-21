@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
+import { withLogger } from "@/lib/logger";
 
-export async function POST(req: Request) {
+export const POST = withLogger("/api/chat/session", async function (req: Request) {
   try {
     const { sessionId, educationStage } = await req.json();
     if (!sessionId) {
@@ -22,4 +23,4 @@ export async function POST(req: Request) {
   } catch {
     return Response.json({ error: "Failed to create session" }, { status: 500 });
   }
-}
+});

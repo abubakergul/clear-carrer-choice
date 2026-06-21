@@ -72,7 +72,7 @@ export default function RegisterPage() {
           Create your account
         </h1>
         <p className="mt-1 text-sm text-stone-500">
-          See what the AI found in your conversation
+          See what your conversation revealed about you
         </p>
       </div>
 

@@ -48,10 +48,13 @@ export default function RealDay({
       choice = `a real day as a ${role}`;
     }
 
+    // Carry the choice via sessionStorage instead of a long URL query string
+    // (long ?choice= values were 404'ing the reflect route in dev).
+    try {
+      sessionStorage.setItem(`ccc_choice_${explorationId}`, choice);
+    } catch {}
     startTransition(() => {
-      router.push(
-        `/dashboard/explore/${explorationId}/reflect?choice=${encodeURIComponent(choice)}`
-      );
+      router.push(`/dashboard/explore/${explorationId}/reflect`);
     });
   }
 

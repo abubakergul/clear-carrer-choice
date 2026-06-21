@@ -48,18 +48,24 @@ EXTERNAL FORMATS — use sparingly, only if no in-app format fits (cap: one site
 
 SIGNAL-BASED ADJUSTMENT:
 - High curiosity from last reflection → go slightly deeper in that direction, can increase intensity one level
-- High intimidation → stay in safe observation territory, do NOT push harder
+- Intimidation/confusion BUT they stayed curious or calm → this is productive struggle, NOT a bad fit. Something feeling hard at first is normal in any demanding field and is not a reason to steer away. Gently show a more real, less scary version of that same path so they can tell "hard but I want to figure it out" from "hard and I want out" — do NOT abandon the path.
+- Intimidation/confusion paired with boredom or "not for me" → that's real aversion; ease off that path.
 - All skips → MUST try a completely different format and direction
 - Bored signals → switch format entirely, try thought experiment or comparison
 
+STRESS-TEST WHAT'S WINNING — careers are decided by what you'll TOLERATE, not just what excites you:
+If an option keeps getting positive reactions in the history below — it's becoming a front-runner — do NOT keep showing its appealing side. An option should not be allowed to look "settled" until its hard side has been tested. So test the part people actually quit over: the un-glamorized, repetitive, or stressful reality of that path, and ask honestly whether they could live with it day after day, not just whether the exciting moment felt good. Use the "real day" format to show the grind, or a this-or-that that pits the exciting part against the part that wears people down. (Someone can love pitching an idea but hate everything else about running a business — surface that before the option looks decided.)
+
 VARIETY ACROSS THE SET — don't make everything "imagine you…":
-A set of 5 explorations that are ALL imagined thought experiments feels fake and repetitive — users notice. Across the journey, mix imagined scenes with explorations that get them into something REAL: reading an actual job description or day-in-the-life write-up, looking at a real example of the work, or reaching out to one real person who does it. Aim for at least a couple of grounded, real-world ones across the 5 — not five daydreams in a row. Look at the history below: if the recent ones were all "imagine", make this one real.
+A set where every exploration is an imagined thought experiment feels fake and repetitive — users notice. Across the journey, mix imagined scenes with explorations that get them into something REAL: reading an actual job description or day-in-the-life write-up, looking at a real example of the work, or reaching out to one real person who does it. Aim for at least one grounded, real-world one — not all daydreams. Look at the history below: if the recent ones were all "imagine", make this one real.
 
 {skipWarning}
 
 {formatVariety}
 
 {groundingDirective}
+
+{avoidRepeats}
 
 For type: OBSERVE | COMPARE | INTERACT | SIMULATE | REFLECT
 For intensity: VERY_LIGHT | LIGHT | MEDIUM (use MEDIUM only for users showing clear repeated curiosity)

@@ -1,11 +1,12 @@
 import { track } from "@/lib/analytics";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { withLogger } from "@/lib/logger";
 
 // Only client-originated funnel events are accepted here; server-side steps
 // (signup, insight, completion) are tracked directly and can't be spoofed.
 const CLIENT_EVENTS = new Set(["chat_started", "wall_reached"]);
 
-export async function POST(req: Request) {
+export const POST = withLogger("/api/track", async function (req: Request) {
   // Always answer 200 so a tracking call can never surface as an error in the UI.
   try {
     const limit = rateLimit(`track:${clientIp(req)}`, 60, 60_000);
@@ -24,4 +25,4 @@ export async function POST(req: Request) {
   } catch {
     return Response.json({ ok: false });
   }
-}
+});

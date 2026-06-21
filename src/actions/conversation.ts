@@ -6,7 +6,7 @@ import OpenAI from "openai";
 import { INSIGHT_PROMPT } from "@/lib/prompts/insight";
 import { FIRST_EXPLORATION_PROMPT } from "@/lib/prompts/first-exploration";
 import { ExplorationStatus, ExplorationType, ExplorationIntensity } from "@/generated/prisma/client";
-import { ExplorationAIResponse, isInteractiveBroken } from "@/lib/exploration";
+import { ExplorationAIResponse, isInteractiveBroken, sanitizeBrokenInteraction } from "@/lib/exploration";
 import { stageLabel, stageExplorationGuidance } from "@/lib/education-stage";
 import { parseDriverFactors } from "@/lib/driver-factors";
 import { track } from "@/lib/analytics";
@@ -184,6 +184,10 @@ export async function claimAndGenerate(
       // retry failed — fall through with original data, page will use plain fallback
     }
   }
+
+  // Still broken after the retry → strip the interactive framing so the user
+  // never sees a "tap each part" prompt with nothing to tap.
+  explorationData = sanitizeBrokenInteraction(explorationData);
 
   // Validate and coerce enums returned by the AI
   const validTypes = Object.values(ExplorationType) as string[];

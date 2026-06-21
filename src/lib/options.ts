@@ -2,7 +2,8 @@
 // into a warming/cooling standing per option they're weighing. No fake scores:
 // the bar reflects how they've reacted so far, never a claim that one is right.
 
-const POSITIVE = new Set([
+// Genuine interest / engagement — warms an option.
+const INTEREST = new Set([
   "Curious",
   "Energized",
   "Excited",
@@ -13,14 +14,21 @@ const POSITIVE = new Set([
   "Enjoyed it",
 ]);
 
-const NEGATIVE = new Set([
-  "Overwhelmed",
-  "Intimidated",
+// Real disengagement / aversion — cools an option.
+const AVERSION = new Set([
   "Bored",
-  "Confused",
   "Resistant",
   "Stressed",
   "Not for me",
+]);
+
+// Difficulty signals. Critically, these are NOT aversion. Something feeling hard,
+// confusing, or intimidating at first is normal in any demanding field and must
+// not be read as "not a fit". So difficulty is scored by context (see charge).
+const STRUGGLE = new Set([
+  "Overwhelmed",
+  "Intimidated",
+  "Confused",
 ]);
 
 export type StandingItem = {
@@ -40,15 +48,29 @@ export type OptionStanding = {
   count: number;
 };
 
-// Charge is driven by what the user actually tapped (the feeling chips). A
-// positive feeling warms the option, a negative one ("Bored", "Stressed",
-// "Not for me") cools it. The derived 1–5 numbers are noise here, so we ignore
-// them and trust the taps.
+// Charge is driven by what the user actually tapped (the feeling chips). Interest
+// warms, aversion cools. Difficulty (Confused/Intimidated/Overwhelmed) is the key
+// case: it does NOT cool on its own — that's how the tool used to push people away
+// from hard-but-worthwhile paths the moment a first taste felt confusing. Instead:
+//   • difficulty + interest  → warms  (engaged THROUGH the struggle — a green flag)
+//   • difficulty + aversion  → cools  (hard AND they want out)
+//   • difficulty alone       → neutral (hard, but no signal it's wrong for them)
 function charge(item: StandingItem): number {
-  return item.signals.reduce(
-    (a, s) => a + (POSITIVE.has(s) ? 1 : NEGATIVE.has(s) ? -1 : 0),
-    0
-  );
+  const sigs = item.signals;
+  const hasInterest = sigs.some((s) => INTEREST.has(s));
+  const hasAversion = sigs.some((s) => AVERSION.has(s));
+
+  let score = 0;
+  for (const s of sigs) {
+    if (INTEREST.has(s)) score += 1;
+    else if (AVERSION.has(s)) score -= 1;
+    else if (STRUGGLE.has(s)) {
+      if (hasInterest && !hasAversion) score += 1;
+      else if (hasAversion && !hasInterest) score -= 1;
+      // hard alone, or genuinely mixed → neutral
+    }
+  }
+  return score;
 }
 
 function loose(a: string, b: string): boolean {
@@ -130,10 +152,16 @@ export function buildVerdict(standings: OptionStanding[]): string {
   } else {
     const second = tested[1];
     const gap = top.fill - second.fill;
-    line =
-      gap > 0.2
-        ? `Based on how you've reacted, ${top.label} is pulling clearly ahead of ${second.label}.`
-        : `${top.label} and ${second.label} are running close — you lean slightly toward ${top.label}.`;
+    const bothWarm = top.state === "lean_in" && second.state === "lean_in";
+    if (gap <= 0.2 && bothWarm) {
+      // Both pulling, close — don't shrug with "lean slightly toward X". The
+      // useful read is that they may not have to choose.
+      line = `Both ${top.label} and ${second.label} are pulling you — this might not be an either/or.`;
+    } else if (gap > 0.2) {
+      line = `Based on how you've reacted, ${top.label} is pulling clearly ahead of ${second.label}.`;
+    } else {
+      line = `${top.label} and ${second.label} are running close — you lean slightly toward ${top.label}.`;
+    }
   }
 
   if (untested.length > 0) {

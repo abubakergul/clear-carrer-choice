@@ -2,20 +2,20 @@ import type { CSSProperties } from "react";
 
 type Props = { size?: number; className?: string };
 
-// The ClearCareerChoice mark — three overlapping rings = different paths/options
-// converging toward one clear choice. Single source of truth so the brand looks
-// the same on the chat, the dashboard, the result page, and sign-in.
+// The ClearCareerChoice mark — converging paths: several possible directions
+// resolving into one clear point. No container (sits in brand violet on any light
+// surface). Single source of truth so the brand looks the same everywhere.
 export function LogoMark({ size = 28, className = "" }: Props) {
-  const icon = Math.round(size * 0.57);
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center rounded-lg bg-stone-950 ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center ${className}`}
       style={{ width: size, height: size } as CSSProperties}
     >
-      <svg width={icon} height={icon} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-        <circle cx="6" cy="7" r="4" stroke="#c4b5fd" strokeWidth="1.2" />
-        <circle cx="10" cy="7" r="4" stroke="#a78bfa" strokeWidth="1.2" opacity="0.6" />
-        <circle cx="8" cy="10" r="4" stroke="#7c3aed" strokeWidth="1.2" opacity="0.3" />
+      <svg width={size} height={size} viewBox="0 0 28 28" fill="none" aria-hidden="true">
+        <path d="M4 6 C 15 14, 15 14, 23 14" stroke="#c4b5fd" strokeWidth="2.2" strokeLinecap="round" />
+        <path d="M4 14 L 21.5 14" stroke="#a78bfa" strokeWidth="2.2" strokeLinecap="round" />
+        <path d="M4 22 C 15 14, 15 14, 23 14" stroke="#7c3aed" strokeWidth="2.2" strokeLinecap="round" />
+        <circle cx="23.5" cy="14" r="2.6" fill="#7c3aed" />
       </svg>
     </span>
   );
