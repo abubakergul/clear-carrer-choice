@@ -64,10 +64,18 @@ export function sanitizeBrokenInteraction(
   if (!isInteractiveBroken(data)) return data;
   const ctx = { ...(data.generationContext ?? {}) };
   delete ctx.interaction;
+
+  // Pull the role out of a "A real day as a [role]" title so the fallback is
+  // specific to their path, not a generic "this kind of work", and retitle it so
+  // it no longer promises the tap-each-part format it can't deliver.
+  const roleMatch = (data.title ?? "").match(/^a real day as (?:an? |the )?(.+)$/i);
+  const role = roleMatch ? roleMatch[1].trim().replace(/[.\s]+$/, "") : "";
+  const subject = role ? `as a ${role}` : "in this kind of work";
+
   return {
     ...data,
-    prompt:
-      "Picture a normal working day in this kind of work — the routine parts, the busy parts, the dull stretches, and any moment that might spark something. Spend a quiet minute imagining it. Notice which parts you'd actually look forward to, and which would wear you down.",
+    title: role ? `Imagine a day as a ${role}` : data.title ?? "Imagine a normal day",
+    prompt: `Picture a normal working day ${subject} — the routine parts, the busy parts, the dull stretches, and any moment that might spark something. Spend a quiet minute imagining it. Notice which parts you'd actually look forward to, and which would wear you down.`,
     generationContext: ctx,
   };
 }
